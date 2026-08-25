@@ -37,9 +37,33 @@ function Shell({ children }: { children: React.ReactNode }) {
   </>;
 }
 
-function GroupWithSettlement(){const path=useLocation().pathname;const match=path.match(/^\/group\/([^/]+)\/?$/);const id=match?.[1];return <><App/><Link className="btn" to={`/group/${id}/settlement`} style={{position:'fixed',right:22,bottom:22,zIndex:60,boxShadow:'0 10px 28px rgba(0,0,0,.18)'}}>Settlement →</Link></>}
+function GroupWithSettlement(){
+  const path=useLocation().pathname;
+  const match=path.match(/^\/group\/([^/]+)\/?$/);
+  const id=match?.[1];
+  return <div style={{minHeight:'100vh',paddingBottom:92}}>
+    <App/>
+    {id && <div style={{position:'fixed',left:0,right:0,bottom:0,zIndex:80,padding:'12px 16px',background:'rgba(255,255,255,.96)',backdropFilter:'blur(12px)',borderTop:'1px solid var(--line)',boxShadow:'0 -8px 30px rgba(0,0,0,.10)'}}>
+      <div style={{maxWidth:1180,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:14}}>
+        <div><b>Ready to settle?</b><span style={{display:'block',fontSize:13,opacity:.7}}>Review who owes who and add any missing wallets.</span></div>
+        <Link className="btn" to={`/group/${id}/settlement`} style={{whiteSpace:'nowrap'}}>Final settlement <span aria-hidden="true">→</span></Link>
+      </div>
+    </div>}
+  </div>;
+}
 
-function Site(){const path=useLocation().pathname;if(path==='/')return <Shell><EnhancedHome/></Shell>;if(path==='/create')return <Shell><EnhancedCreate/></Shell>;if(path==='/how-it-works')return <Shell><HowItWorks/></Shell>;if(path==='/help')return <Shell><Help/></Shell>;if(path==='/about')return <Shell><About/></Shell>;const settlement=path.match(/^\/group\/([^/]+)\/settlement\/?$/);if(settlement)return <Shell><SettlementHub id={settlement[1]}/></Shell>;if(/^\/group\/[^/]+\/?$/.test(path))return <GroupWithSettlement/>;return <App/>;}
+function Site(){
+  const path=useLocation().pathname;
+  if(path==='/')return <Shell><EnhancedHome/></Shell>;
+  if(path==='/create')return <Shell><EnhancedCreate/></Shell>;
+  if(path==='/how-it-works')return <Shell><HowItWorks/></Shell>;
+  if(path==='/help')return <Shell><Help/></Shell>;
+  if(path==='/about')return <Shell><About/></Shell>;
+  const settlement=path.match(/^\/group\/([^/]+)\/settlement\/?$/);
+  if(settlement)return <Shell><SettlementHub id={settlement[1]}/></Shell>;
+  if(/^\/group\/[^/]+\/?$/.test(path))return <GroupWithSettlement/>;
+  return <App/>;
+}
 
 function About(){return <main className="about"><p className="eyebrow">ABOUT SPLITMATE</p><h1>Shared money, made simple.</h1><p>Splitmate helps friends, roommates, teams, events, communities and trips track shared expenses, calculate balances and prepare settlements.</p><div className="panel"><h2>Your group's money coordinator.</h2><p>The Agent understands expenses, asks for missing details, works with saved group context and prepares useful actions. You approve every payment.</p></div><div className="panel" style={{marginTop:18}}><p className="eyebrow">ORION AGENT HACKATHON</p><h2>Built around an Agent doing useful work.</h2><p>Splitmate is designed to turn natural language into real expense and settlement actions while keeping the human in control.</p></div></main>}
 
