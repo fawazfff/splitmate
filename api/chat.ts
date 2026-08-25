@@ -30,21 +30,25 @@ if(deterministic){result=deterministic;}else{const context={group:{name:trip.nam
 let cid=conversationId||null;if(supabaseReady()){try{if(!cid){const groups=await sbJson(`groups?name=eq.${encodeURIComponent(trip.name)}&select=id&limit=1`,undefined,'GET');const groupId=groups[0]?.id;if(groupId){const conversations=await sbJson('agent_conversations',{group_id:groupId});cid=conversations[0]?.id||null}}if(cid){await sbJson('agent_messages',{conversation_id:cid,role:'user',content:message});await sbJson('agent_messages',{conversation_id:cid,role:'assistant',content:result.message||''});}}catch(e){console.error('Supabase memory save failed',e)}}return res.status(200).json({message:result.message||'Done.',action:result.action||null,conversationId:cid})}catch(error:any){console.error('chat handler error',error);return res.status(500).json({error:error?.message||'Agent request failed.'})}}
 
 function understandExpense(latest:string,history:any[],trip:Trip){
-const text=[...history.filter((m:any)=>m.role==='user').map((m:any)=>m.content),latest].join(' ');const low=latest.toLowerCase();
+const users=history.filter((m:any)=>m.role==='user').map((m:any)=>String(m.content||'')).filter(Boolean);const allText=[...users,latest].join(' ');const people=trip.people||[];
 if(/\b(who\s+owes|owe|owes|balance|settle|settlement|pay\s+who|who\s+pays)\b/i.test(latest))return{message:'I’ll calculate the current balances and prepare the simplest settlement for your group.',action:{type:'show_settlement',all:true}};
 if(/\b(analy[sz]e|analysis|spending|spent|expense\s+breakdown|where.*money)\b/i.test(latest))return{message:'Analyzing your group’s spending using the saved expenses.',action:{type:'analyze_spending'}};
-const people=trip.people||[];const findPerson=(s:string)=>{const n=s.trim().toLowerCase();return people.find(p=>p.name.toLowerCase()===n)||people.find(p=>p.name.toLowerCase().includes(n)||n.includes(p.name.toLowerCase()))};
-let payer:Person|undefined;for(const p of people){const re=new RegExp(`\\b${escapeRegExp(p.name)}\\b`,'i');if(re.test(latest)&&(/\b(paid|paying|covered|spent|bought|got|covered it)\b/i.test(latest))){payer=p;break}}
-if(!payer){const payerMatch=latest.match(/^(?:i|we)\s+(?:paid|covered|spent)\b/i);if(payerMatch&&people.length){payer=people.find(p=>/^fawaz$/i.test(p.name))||undefined}}
-if(!payer){const previousPayer=history.slice().reverse().map((m:any)=>typeof m.content==='string'?m.content:'').find((s:string)=>/\b(paid|covered|spent)\b/i.test(s));if(previousPayer)for(const p of people)if(new RegExp(`\\b${escapeRegExp(p.name)}\\b`,'i').test(previousPayer)){payer=p;break}}
-let amount:number|undefined;const amountMatches=[...text.matchAll(/(?:\$|usd\s*)?([0-9]+(?:[.,][0-9]{1,2})?)(?:\s*(?:usd|dollars?|bucks))?/gi)];if(amountMatches.length)amount=Number(amountMatches[amountMatches.length-1][1].replace(',','.'));
-let title:string|undefined;const titlePatterns=[/\bfor\s+(?:everyone|us|the\s+group)\s*$/i,/\bfor\s+(.+?)(?:\s+for\s+(?:everyone|us|the\s+group))?[.!]?$/i,/\b(?:on|for)\s+(?:a|the)\s+(.+?)[.!]?$/i];for(const re of titlePatterns){const m=latest.match(re);if(m&&m[1]&&!/^(everyone|us|the group)$/i.test(m[1].trim())){title=m[1].trim().replace(/[.!?]+$/,'');break}}
-if(!title){const known=/\b(dinner|lunch|breakfast|drinks?|transport|taxi|uber|hotel|rent|groceries|food|tickets?|flight|gas|fuel|coffee|snacks?|shopping)\b/i.exec(latest);if(known)title=known[1]}
-let split=people.map(p=>p.id);if(/\b(?:for|shared with|split with)\s+([^.!?]+)$/i.test(latest)){const m=latest.match(/\b(?:for|shared with|split with)\s+([^.!?]+)$/i);const part=m?.[1]?.trim();if(part&&/^everyone|all of us|the group$/i.test(part))split=people.map(p=>p.id);else if(part){const names=part.split(/,|\band\b/i).map(x=>x.trim()).filter(Boolean);const found=names.map(findPerson).filter(Boolean) as Person[];if(found.length)split=found.map(p=>p.id)}}
-const hasExpenseIntent=/\b(paid|paying|covered|spent|bought|expense|cost|costs)\b/i.test(text);
+const findPerson=(s:string)=>{const n=s.trim().toLowerCase();return people.find(p=>p.name.toLowerCase()===n)||people.find(p=>p.name.toLowerCase().includes(n)||n.includes(p.name.toLowerCase()))};
+const isPayerText=(s:string)=>/\b(paid|paying|pay|covered|spent|bought|buying|got|purchased|purchase|covered\s+it)\b/i.test(s);
+let payer:Person|undefined;
+for(const p of people){const re=new RegExp(`\\b${escapeRegExp(p.name)}\\b`,'i');if(re.test(latest)&&isPayerText(latest)){payer=p;break}}
+if(!payer){for(const s of [...users].reverse()){if(!isPayerText(s))continue;for(const p of people){if(new RegExp(`\\b${escapeRegExp(p.name)}\\b`,'i').test(s)){payer=p;break}}if(payer)break}}
+if(!payer){const selfMatch=latest.match(/^\s*(?:i|we)\s+(?:paid|pay|covered|spent|bought|purchased)\b/i);if(selfMatch){const self=people.find(p=>/^fawaz$/i.test(p.name));if(self)payer=self}}
+let amount:number|undefined;for(const source of [latest,...users.slice().reverse()]){const matches=[...source.matchAll(/(?:\$|usd\s*)?([0-9]+(?:[.,][0-9]{1,2})?)(?:\s*(?:usd|dollars?|bucks))?/gi)];if(matches.length){const n=Number(matches[matches.length-1][1].replace(',','.'));if(Number.isFinite(n)){amount=n;break}}}
+let title:string|undefined;
+const titleFrom=(s:string)=>{let m=s.match(/\b(?:bought|buying|purchased|purchase)\s+(?:some\s+|a\s+|an\s+)?(.+?)(?:\s+for\s+(?:everyone|us|the\s+group))?[.!?]?$/i);if(m?.[1])return m[1].trim().replace(/[.!?]+$/,'');m=s.match(/\b(?:for|on)\s+(?:a|an|the)\s+(.+?)[.!?]?$/i);if(m?.[1])return m[1].trim().replace(/[.!?]+$/,'');const known=/\b(dinner|lunch|breakfast|drinks?|transport|taxi|uber|hotel|rent|groceries|food|tickets?|flight|gas|fuel|coffee|snacks?|shopping)\b/i.exec(s);return known?.[1]};
+for(const s of [latest,...users.slice().reverse()]){const t=titleFrom(s);if(t){title=t;break}}
+let split=people.map(p=>p.id);
+for(const s of [latest,...users.slice().reverse()]){const m=s.match(/\b(?:for|shared with|split with)\s+([^.!?]+)$/i);if(!m)continue;const part=m[1].trim();if(/^(everyone|all of us|the group)$/i.test(part)){split=people.map(p=>p.id);break}const names=part.split(/,|\band\b/i).map(x=>x.trim()).filter(Boolean);const found=names.map(findPerson).filter(Boolean) as Person[];if(found.length){split=found.map(p=>p.id);break}}
+const hasExpenseIntent=/\b(paid|paying|pay|covered|spent|bought|buying|purchased|purchase|expense|cost|costs)\b/i.test(allText);
 if(!hasExpenseIntent)return null;
 if(!payer)return{message:'Who paid for it?',action:null};
-if(amount===undefined||!Number.isFinite(amount))return{message:'How much was it?',action:null};
+if(amount===undefined)return{message:'How much was it?',action:null};
 if(!title)return{message:'What was it for?',action:null};
 return{message:`Got it. ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between ${split.map(id=>people.find(p=>p.id===id)?.name).filter(Boolean).join(', ')}. Save this expense?`,action:{type:'add_expense',title,amount,paidBy:payer.id,splitBetween:split}};
 }
