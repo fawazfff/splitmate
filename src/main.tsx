@@ -12,6 +12,7 @@ import HowItWorks from './pages/HowItWorks';
 import Help from './pages/Help';
 import EnhancedHome from './pages/EnhancedHome';
 import EnhancedCreate from './pages/EnhancedCreate';
+import SettlementHub from './pages/SettlementHub';
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,8 @@ function Site() {
   if (path === '/how-it-works') return <Shell><HowItWorks /></Shell>;
   if (path === '/help') return <Shell><Help /></Shell>;
   if (path === '/about') return <Shell><About /></Shell>;
+  const settlement = path.match(/^\/group\/([^/]+)\/settlement\/?$/);
+  if (settlement) return <Shell><SettlementHub id={settlement[1]} /></Shell>;
   return <App />;
 }
 
