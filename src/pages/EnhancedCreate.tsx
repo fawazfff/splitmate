@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Camera, Loader2, Plus, Wallet, X } from 'lucide-react';
-import { persistGroup } from '../groupStore';
+import { cacheGroup, persistGroup } from '../groupStore';
 import type { Group, Person } from '../types';
 
 const newPerson = (): Person => ({ id: crypto.randomUUID(), name: '' });
@@ -65,12 +65,15 @@ export default function EnhancedCreate() {
     };
     setSaving(true);
     try {
-      const saved = await persistGroup(group);
-      navigate(`/group/${saved.id}`);
+      // A new group is immediately usable in this browser. Do not trap the user
+      // on this form while a cold serverless/database request is waking up.
+      cacheGroup(group);
+      navigate(`/group/${group.id}`);
+      void persistGroup(group).catch((reason) => {
+        console.warn('Splitmate could not immediately sync the new group.', reason);
+      });
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'The group could not be created.');
-    } finally {
-      setSaving(false);
     }
   };
 
