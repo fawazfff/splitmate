@@ -21,10 +21,12 @@ export function usePersistentGroup(id: string) {
     let active = true;
     const cached = loadLocalGroup(id);
     setGroup(cached);
-    setLoading(true);
+    setLoading(!cached);
     fetchGroup(id)
       .then((saved) => {
-        if (active) setGroup(saved);
+        // A just-created group may be in the browser before its first cloud
+        // write has completed. Keep that usable local copy in that short gap.
+        if (active && saved) setGroup(saved);
       })
       .catch((reason: Error) => {
         if (active) setError(reason.message);
