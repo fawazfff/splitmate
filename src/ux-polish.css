@@ -1,0 +1,29 @@
+/* Small UX improvements inspired by UI UX Pro Max guidance. Keeps Splitmate's existing visual language. */
+:root{--focus:#315cf4;--surface:#fff;--muted:#737b8c;--line:#e7eaf0;--success:#238a5a;--danger:#b4233c}
+button,a,input,select{touch-action:manipulation}
+button,a{cursor:pointer}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid rgba(49,92,244,.28);outline-offset:2px}
+button:disabled{cursor:not-allowed}
+.agent-card{contain:layout paint}
+.agent-status{min-height:34px;display:flex;align-items:center;gap:8px}
+.agent-status:before{content:"";width:7px;height:7px;border-radius:50%;background:#31a36b;flex:0 0 auto}
+.agent-status.is-working:before{background:#315cf4;animation:agent-pulse 1.1s ease-in-out infinite}
+.agent-status.is-error:before{background:#c63c55}
+.agent-messages{scroll-behavior:smooth;scrollbar-width:thin}
+.loading-bubble{display:flex;align-items:center;gap:8px;color:#687184}
+.loading-bubble svg{animation:spin 1s linear infinite}
+.agent-suggestions{overflow-x:auto;scrollbar-width:none;padding-bottom:4px}.agent-suggestions::-webkit-scrollbar{display:none}
+.agent-suggestions button{white-space:nowrap;min-height:38px;transition:transform .16s ease,background .16s ease,border-color .16s ease}.agent-suggestions button:hover:not(:disabled){transform:translateY(-1px);border-color:#cbd3e4}
+.agent-input input{min-height:46px}.agent-input button{min-width:46px;min-height:46px;display:grid;place-items:center}
+.agent-confirm{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.agent-confirm .btn{min-height:44px}
+.completed{display:flex;align-items:center;gap:5px;color:var(--success);margin-top:9px}
+.wallet-field{display:flex;align-items:center;gap:7px;margin-top:8px;padding:0 8px;border:1px solid var(--line);border-radius:12px;background:#fbfcfe;min-height:44px}.wallet-field:focus-within{border-color:#9cb0f7;box-shadow:0 0 0 3px rgba(49,92,244,.08)}.wallet-field svg{color:#687184;flex:0 0 auto}.wallet-field input{border:0!important;outline:0!important;box-shadow:none!important;background:transparent;min-width:0;margin:0!important;padding:8px 2px!important}.wallet-field button{border:0;background:#eef2ff;color:#315cf4;border-radius:8px;padding:7px 9px;font-weight:700;font-size:11px;min-height:32px;flex:0 0 auto}
+.person{transition:background .16s ease,border-color .16s ease}.person:focus-within{border-color:#d4dcf4}
+.form label{line-height:1.45}.form input,.form select{font-size:16px}
+.error{color:var(--danger);background:#fff3f5;border:1px solid #f4cbd3;border-radius:10px;padding:10px 12px}
+.settle-callout{position:sticky;bottom:14px;z-index:10;box-shadow:0 12px 35px rgba(20,30,50,.12);backdrop-filter:blur(12px)}
+@keyframes agent-pulse{50%{opacity:.35;transform:scale(.75)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:700px){.agent-suggestions{margin-inline:-2px;padding-inline:2px}.settle-callout{bottom:8px}.wallet-field{width:100%}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
