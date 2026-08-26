@@ -9,11 +9,11 @@ const system = `You are Splitmate Agent, an action-oriented shared-expense opera
 SCOPE: shared expenses, group members, balances, spending analysis, settlement planning, wallets, Base payments and using Splitmate. Politely redirect unrelated questions to shared money.
 MEMORY: Treat the supplied conversation history as working memory. Never restart a questionnaire. Resolve short replies such as “10”, “Fawaz”, “dinner”, “everyone”, “yes”, “that one”, and “the last one” from the latest unresolved question and current group data. Never ask for a fact already present.
 IDENTITY: CURRENT USER identifies the group member represented by “I”, “me”, “my”, and “you”. Never assume that person is named Fawaz.
-EXPENSE CAPTURE: Required facts are description, amount and payer. Every expense is always split equally between every current group member. Never ask who should split an expense and never create a partial split. Extract every complete expense in the message. If incomplete, ask ONLY for the next missing fact. Corrections replace an unconfirmed draft. The UI always asks the human to confirm before saving.
+EXPENSE CAPTURE: Required facts are description, amount and payer. Default each expense to every current group member only when the user does not state a split group. When the user says “split with”, “split between”, “shared with”, or “shared between” named people, split between the payer and those named people only. Extract every complete expense in the message. If incomplete, ask ONLY for the next missing fact. Corrections replace an unconfirmed draft. The UI always asks the human to confirm before saving.
 ACTIONS: add_expense, add_expenses, update_expense, delete_expense, add_person, show_settlement, analyze_spending, explain_balance, or none. When adding, changing, or deleting data, prepare an action for explicit UI confirmation. Never claim the change was saved before confirmation.
 PAYMENTS: Never claim a payment happened. The dedicated Final Settlement screen sends native USDC on Base mainnet and the payer approves it in their wallet.
 Return ONLY valid JSON: {"message":string,"action":null|{...}}.
-Allowed actions: {"type":"add_expense","title":string,"amount":number,"paidBy":personId,"splitBetween":[all current personIds]}; {"type":"add_expenses","expenses":[{"title":string,"amount":number,"paidBy":personId,"splitBetween":[all current personIds]}]}; {"type":"update_expense","expenseIndex":number,"title"?:string,"amount"?:number,"paidBy"?:personId,"splitBetween"?:[all current personIds]}; {"type":"delete_expense","expenseIndex":number}; {"type":"add_person","name":string,"wallet"?:string}; {"type":"show_settlement","all":boolean}; {"type":"analyze_spending"}; {"type":"explain_balance"}. Keep replies concise.`;
+Allowed actions: {"type":"add_expense","title":string,"amount":number,"paidBy":personId,"splitBetween":[personId,...]}; {"type":"add_expenses","expenses":[{"title":string,"amount":number,"paidBy":personId,"splitBetween":[personId,...]}]}; {"type":"update_expense","expenseIndex":number,"title"?:string,"amount"?:number,"paidBy"?:personId,"splitBetween"?:[personId,...]}; {"type":"delete_expense","expenseIndex":number}; {"type":"add_person","name":string,"wallet"?:string}; {"type":"show_settlement","all":boolean}; {"type":"analyze_spending"}; {"type":"explain_balance"}. Keep replies concise.`;
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Cache-Control', 'no-store');
@@ -180,12 +180,13 @@ function sanitizeAction(value: unknown, trip: Group): AgentAction | null {
       title: action.title.trim().slice(0, 120),
       amount: Number(amount.toFixed(6)),
       paidBy: action.paidBy,
-      splitBetween: trip.people.map((person) => person.id),
+      splitBetween,
     };
   }
   if (action.type === 'add_expenses' && Array.isArray(action.expenses) && action.expenses.length > 0 && action.expenses.length <= 20) {
     const expenses = action.expenses.flatMap((expense: any) => {
       const amount = Number(expense?.amount);
+      const splitBetween = cleanSplit(expense?.splitBetween);
       if (
         !expense ||
         typeof expense.title !== 'string' ||
@@ -193,13 +194,14 @@ function sanitizeAction(value: unknown, trip: Group): AgentAction | null {
         !Number.isFinite(amount) ||
         amount <= 0 ||
         amount > 1_000_000 ||
-        !memberIds.has(expense.paidBy)
+        !memberIds.has(expense.paidBy) ||
+        splitBetween.length === 0
       ) return [];
       return [{
         title: expense.title.trim().slice(0, 120),
         amount: Number(amount.toFixed(6)),
         paidBy: expense.paidBy,
-        splitBetween: trip.people.map((person) => person.id),
+        splitBetween,
       }];
     });
     return expenses.length === action.expenses.length ? { type: 'add_expenses', expenses } : null;
@@ -341,6 +343,14 @@ function understandExpense(
     }
     return /\b(dinner|lunch|breakfast|drinks?|transport|taxi|uber|hotel|rent|groceries|food|tickets?|flight|gas|fuel|coffee|snacks?|shopping)\b/i.exec(text)?.[1];
   };
+  const splitFrom = (text: string, payer: Person) => {
+    if (!/\b(?:split|shared?)\s+(?:with|between|among)\b/i.test(text)) return everyone;
+    const namedPeople = people.filter((person) => new RegExp(`\\b${escapeRegExp(person.name)}\\b`, 'i').test(text));
+    return [...new Set([payer.id, ...namedPeople.map((person) => person.id)])];
+  };
+  const splitLabel = (splitBetween: string[]) => splitBetween.length === everyone.length
+    ? 'everybody'
+    : splitBetween.map((id) => people.find((person) => person.id === id)?.name).filter(Boolean).join(', ');
 
   const makeExpense = (source: string) => {
     if (!startsExpense.test(source)) return undefined;
@@ -348,7 +358,7 @@ function understandExpense(
     const amount = detectAmount([source]);
     const title = titleFrom(source);
     return payer && amount !== undefined && title
-      ? { title, amount, paidBy: payer.id, splitBetween: everyone }
+      ? { title, amount, paidBy: payer.id, splitBetween: splitFrom(source, payer) }
       : undefined;
   };
 
@@ -357,7 +367,7 @@ function understandExpense(
     if (expenses.every(Boolean)) {
       const confirmedExpenses = expenses as Array<{ title: string; amount: number; paidBy: string; splitBetween: string[] }>;
       return {
-        message: `I found ${confirmedExpenses.length} expenses. They will each be split between everybody.`,
+        message: `I found ${confirmedExpenses.length} expenses. Review each split before saving.`,
         action: { type: 'add_expenses', expenses: confirmedExpenses },
       };
     }
@@ -381,10 +391,12 @@ function understandExpense(
   if (!payer) return { message: 'Who paid for it?', action: null };
   if (amount === undefined) return { message: 'How much was it?', action: null };
   if (!title) return { message: 'What was it for?', action: null };
+  const splitBetween = sources.find((source) => /\b(?:split|shared?)\s+(?:with|between|among)\b/i.test(source));
+  const split = splitBetween ? splitFrom(splitBetween, payer) : everyone;
 
   return {
-    message: `I understood this: ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between everybody.`,
-    action: { type: 'add_expense', title, amount, paidBy: payer.id, splitBetween: everyone },
+    message: `I understood this: ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between ${splitLabel(split)}.`,
+    action: { type: 'add_expense', title, amount, paidBy: payer.id, splitBetween: split },
   };
 }
 
