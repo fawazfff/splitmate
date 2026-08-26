@@ -44,7 +44,14 @@ export default async function handler(req: any, res: any) {
       trip = suppliedTrip;
       history = cleanHistory(req.body?.history);
     } else {
-      const row = await getOwnedGroupRow(String(suppliedTrip.id || ''), clientId);
+      let row = await getOwnedGroupRow(String(suppliedTrip.id || ''), clientId);
+      // A group can open locally a moment before its first background save
+      // reaches the database. Give that save a short chance to finish before
+      // telling the Agent that the group does not exist.
+      for (let attempt = 0; !row && attempt < 2; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+        row = await getOwnedGroupRow(String(suppliedTrip.id || ''), clientId);
+      }
       if (!row) return res.status(404).json({ error: 'Group not found.' });
       trip = groupFromRow(row);
       const conversation = await ensureConversation(trip.id);
