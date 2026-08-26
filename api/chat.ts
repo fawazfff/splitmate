@@ -273,6 +273,20 @@ function understandExpense(
     return { message: 'Analyzing your group’s saved expenses.', action: { type: 'analyze_spending' } };
   }
 
+  const draftMatch = lastAssistant.match(/I understood this:\s+(.+?) paid \$([0-9]+(?:\.[0-9]+)?) for (.+?), split between/i);
+  const correctedAmount = latest.match(/^(?:no,?\s*)?(?:it was|actually|make it)\s*\$?([0-9]+(?:[.,][0-9]{1,6})?)/i);
+  if (draftMatch && correctedAmount) {
+    const payer = people.find((person) => person.name.toLowerCase() === draftMatch[1].trim().toLowerCase());
+    const amount = Number(correctedAmount[1].replace(',', '.'));
+    const title = draftMatch[3].trim();
+    if (payer && Number.isFinite(amount) && amount > 0 && title) {
+      return {
+        message: `I updated the draft: ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between everybody.`,
+        action: { type: 'add_expense', title, amount, paidBy: payer.id, splitBetween: everyone, replacesPending: true },
+      };
+    }
+  }
+
   const isExpenseFollowUp = /\bwho paid|\bhow much|\bwhat was (?:it|the|this expense) for/i.test(lastAssistant);
   if (!/\b(paid|paying|pay|covered|spent|bought|buying|got|purchased|purchase|expense|cost|costs)\b/i.test(latest) && !isExpenseFollowUp) {
     return null;
@@ -345,20 +359,6 @@ function understandExpense(
       return {
         message: `I found ${confirmedExpenses.length} expenses. They will each be split between everybody.`,
         action: { type: 'add_expenses', expenses: confirmedExpenses },
-      };
-    }
-  }
-
-  const draftMatch = lastAssistant.match(/I understood this:\s+(.+?) paid \$([0-9]+(?:\.[0-9]+)?) for (.+?), split between/i);
-  const correctedAmount = latest.match(/^(?:no,?\s*)?(?:it was|actually|make it)\s*\$?([0-9]+(?:[.,][0-9]{1,6})?)/i);
-  if (draftMatch && correctedAmount) {
-    const payer = findPerson(draftMatch[1]);
-    const amount = Number(correctedAmount[1].replace(',', '.'));
-    const title = draftMatch[3].trim();
-    if (payer && Number.isFinite(amount) && amount > 0 && title) {
-      return {
-        message: `I updated the draft: ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between everybody.`,
-        action: { type: 'add_expense', title, amount, paidBy: payer.id, splitBetween: everyone, replacesPending: true },
       };
     }
   }
