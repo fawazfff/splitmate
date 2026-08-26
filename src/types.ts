@@ -48,6 +48,12 @@ export type AgentAction =
       amount: number;
       paidBy: string;
       splitBetween: string[];
+      replacesPending?: boolean;
+      confirmed?: boolean;
+    }
+  | {
+      type: 'add_expenses';
+      expenses: Array<{ title: string; amount: number; paidBy: string; splitBetween: string[] }>;
       confirmed?: boolean;
     }
   | {
