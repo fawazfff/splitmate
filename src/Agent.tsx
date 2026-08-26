@@ -112,9 +112,27 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
       if (!response.ok) throw new Error(data.error || 'Agent request failed.');
       if (data.conversationId) setConversationId(data.conversationId);
       const action = (data.action || null) as AgentAction | null;
-      setMessages((current) => [...current, { role: 'agent', text: data.message || 'Done.', action }]);
+      setMessages((current) => {
+        const nextMessage = { role: 'agent' as const, text: data.message || 'Done.', action };
+        if (action?.type === 'add_expense' && action.replacesPending) {
+          let pendingIndex = -1;
+          for (let index = current.length - 1; index >= 0; index -= 1) {
+            const message = current[index];
+            if (message.role === 'agent' && message.action?.type === 'add_expense' && !message.action.confirmed) {
+              pendingIndex = index;
+              break;
+            }
+          }
+          if (pendingIndex >= 0) {
+            const next = [...current];
+            next[pendingIndex] = nextMessage;
+            return next;
+          }
+        }
+        return [...current, nextMessage];
+      });
       setActivity(
-        action?.type === 'add_expense' ? 'Expense ready to review'
+        action?.type === 'add_expense' || action?.type === 'add_expenses' ? 'Expense ready to review'
           : action?.type === 'update_expense' || action?.type === 'delete_expense' || action?.type === 'add_person' ? 'Change ready to review'
             : action?.type === 'show_settlement' ? 'Settlement ready'
               : action?.type === 'analyze_spending' ? 'Spending analysis ready'
@@ -134,7 +152,7 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
   };
 
   const confirm = async (action: AgentAction) => {
-    if (!['add_expense', 'update_expense', 'delete_expense', 'add_person'].includes(action.type)) return;
+    if (!['add_expense', 'add_expenses', 'update_expense', 'delete_expense', 'add_person'].includes(action.type)) return;
     setConfirming(action);
     try {
       let next = trip;
@@ -143,6 +161,11 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
           id: crypto.randomUUID(), title: action.title, amount: Number(action.amount),
           paid: action.paidBy, split: action.splitBetween,
         }] };
+      } else if (action.type === 'add_expenses') {
+        next = { ...trip, expenses: [...trip.expenses, ...action.expenses.map((expense) => ({
+          id: crypto.randomUUID(), title: expense.title, amount: Number(expense.amount),
+          paid: expense.paidBy, split: expense.splitBetween,
+        }))] };
       } else if (action.type === 'update_expense') {
         next = { ...trip, expenses: trip.expenses.map((expense, index) =>
           index === action.expenseIndex ? {
@@ -197,6 +220,11 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     if (action.type === 'add_expense') {
       return `${action.title} · $${action.amount.toFixed(2)} · paid by ${personName(action.paidBy)} · split between ${action.splitBetween.map(personName).join(', ')}`;
     }
+    if (action.type === 'add_expenses') {
+      return action.expenses.map((expense) =>
+        `${expense.title} · $${expense.amount.toFixed(2)} · paid by ${personName(expense.paidBy)} · split between everybody`,
+      ).join('\n');
+    }
     if (action.type === 'update_expense') return `Update ${trip.expenses[action.expenseIndex]?.title || `expense ${action.expenseIndex + 1}`}.`;
     if (action.type === 'delete_expense') return `Delete ${trip.expenses[action.expenseIndex]?.title || `expense ${action.expenseIndex + 1}`}.`;
     if (action.type === 'add_person') return `Add ${action.name} to this group.`;
@@ -229,7 +257,7 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     <div className="agent-messages" aria-live="polite">
       {messages.map((message, index) => <div key={`${message.role}-${index}`} className={`bubble ${message.role === 'user' ? 'user' : ''}`}>
         <div>{message.text}</div>
-        {message.action && ['add_expense', 'update_expense', 'delete_expense', 'add_person'].includes(message.action.type) && !('confirmed' in message.action && message.action.confirmed) && <div className="agent-confirm">
+        {message.action && ['add_expense', 'add_expenses', 'update_expense', 'delete_expense', 'add_person'].includes(message.action.type) && !('confirmed' in message.action && message.action.confirmed) && <div className="agent-confirm">
           <b>Change ready to review</b><p>{confirmationCopy(message.action)}</p>
           <button className="btn" onClick={() => confirm(message.action!)} disabled={confirming === message.action}>
             {confirming === message.action ? <Loader2 size={14}/> : <Check size={14}/>} Confirm change
