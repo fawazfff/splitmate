@@ -19,7 +19,7 @@ export default async function handler(req: any, res: any) {
 
     if (req.method === 'GET') {
       const messages = await sbJson(
-        `agent_messages?conversation_id=eq.${encodeURIComponent(conversation.id)}&select=role,content,created_at&order=created_at.desc&limit=40`,
+        `agent_messages?conversation_id=eq.${encodeURIComponent(conversation.id)}&select=role,content,message_order&order=message_order.desc&limit=40`,
         undefined,
         'GET',
       );

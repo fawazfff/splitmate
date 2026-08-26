@@ -139,7 +139,7 @@ function cleanHistory(value: unknown) {
 
 async function loadHistory(conversationId: string) {
   const rows = await sbJson(
-    `agent_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=role,content&order=created_at.desc&limit=40`,
+    `agent_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=role,content,message_order&order=message_order.desc&limit=40`,
     undefined,
     'GET',
   );
