@@ -88,10 +88,25 @@ export default async function handler(req: any, res: any) {
       const text = data.output_text || extractOutput(data);
       try {
         const parsed = JSON.parse(text);
+        const action = sanitizeAction(parsed.action, trip);
         result = {
           message: typeof parsed.message === 'string' ? parsed.message.slice(0, 1_200) : 'Done.',
-          action: sanitizeAction(parsed.action, trip),
+          action,
         };
+        // A single-person split is valid only when the user clearly says so.
+        // This protects a shared expense from a model guessing that the payer
+        // should also be the only person charged.
+        if (
+          action?.type === 'add_expense'
+          && trip.people.length > 1
+          && action.splitBetween.length === 1
+          && !allowsSoloSplit(message, history, trip.people.find((person) => person.id === action.splitBetween[0]))
+        ) {
+          result = {
+            message: 'Who should split it? Name the people involved, or say “everyone.”',
+            action: null,
+          };
+        }
       } catch {
         result = { message: 'Tell me what happened with the shared expense, or ask who owes whom.', action: null };
       }
@@ -305,8 +320,11 @@ function understandExpense(
   if (amount === undefined && /\bhow much(?: was it)?\??$/i.test(lastAssistant)) amount = detectAmount([latest]);
   if (!payer && /\bwho paid(?: for it| for this)?\??$/i.test(lastAssistant)) payer = findPerson(latest);
 
-  const detectSplit = (text: string) => {
+  const detectSplit = (text: string, allowNameList = false) => {
     if (/\b(everyone|all of us|the whole group)\b/i.test(text)) return people.map((person) => person.id);
+    const explicitSplit = /\b(?:split|shared?)\s+(?:with|between|among)?\s*/i.test(text)
+      || /\bfor\s+(?:everyone|all of us|the whole group)\b/i.test(text);
+    if (!explicitSplit && !allowNameList) return undefined;
     const found = people.filter((person) => new RegExp(`\\b${escapeRegExp(person.name)}\\b`, 'i').test(text));
     return found.length ? found.map((person) => person.id) : undefined;
   };
@@ -317,7 +335,7 @@ function understandExpense(
     if (split) break;
   }
   if (!split && /\bwho should (?:split|share)|split (?:it|this) between whom/i.test(lastAssistant)) {
-    split = detectSplit(latest);
+    split = detectSplit(latest, true);
   }
 
   if (!payer) return { message: 'Who paid for it?', action: null };
@@ -329,6 +347,22 @@ function understandExpense(
     message: `I understood this: ${payer.name} paid $${amount.toFixed(2)} for ${title}, split between ${split.map((id) => people.find((person) => person.id === id)?.name).filter(Boolean).join(', ')}.`,
     action: { type: 'add_expense', title, amount, paidBy: payer.id, splitBetween: split },
   };
+}
+
+function allowsSoloSplit(
+  latest: string,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  person?: Person,
+) {
+  const sources = [latest, ...history.filter((item) => item.role === 'user').slice(-4).map((item) => item.content)];
+  const personName = person ? escapeRegExp(person.name) : '';
+  return sources.some((source) => {
+    const explicitSelf = /\b(?:just|only)\s+(?:me|myself|i)\b/i.test(source);
+    const explicitPerson = personName
+      ? new RegExp(`\\b(?:just|only)\\s+${personName}\\b|\\b${personName}\\s+only\\b`, 'i').test(source)
+      : false;
+    return explicitSelf || explicitPerson;
+  });
 }
 
 function calculateBalances(trip: Group) {
