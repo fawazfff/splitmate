@@ -1,13 +1,166 @@
-import{useState}from'react';import{Link,useLocation,useNavigate}from'react-router-dom';import{ArrowLeft,ArrowRight,Check,Plus,Sparkles,X,Menu,Copy,Wallet,Camera,MessageCircle}from'lucide-react';import{useAccount}from'wagmi';import{useConnectModal}from'@rainbow-me/rainbowkit';import Agent from'./Agent';
-type Person={id:string,name:string,wallet?:string,avatar?:string};type Exp={title:string,amount:number,paid:string,split:string[]};type Group={id:string,name:string,people:Person[],expenses:Exp[]};const KEY='splitmate.groups';const load=():Group[]=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}};const save=(g:Group)=>localStorage.setItem(KEY,JSON.stringify([g,...load().filter(x=>x.id!==g.id)]));const uid=()=>crypto.randomUUID();const money=(n:number)=>'$'+Number(n||0).toFixed(2);function Avatar({p,size=48}:{p:Person,size?:number}){return <div className="avatar" style={{width:size,height:size}}>{p.avatar?<img src={p.avatar} alt=""/>:p.name?.[0]?.toUpperCase()||'?'}</div>}
-function Header(){const[o,setO]=useState(false);return <header><Link className="brand" to="/" onClick={()=>setO(false)}>split<span>mate</span></Link><nav><Link to="/">Home</Link><Link to="/create">Create group</Link><Link to="/how-it-works">How it works</Link><Link to="/help">Help & FAQ</Link><Link to="/about">About</Link></nav><Link className="btn small" to="/create">Start a group</Link><button className="icon mobile-menu" onClick={()=>setO(!o)}><Menu size={19}/></button>{o&&<div className="mobile-nav">{[['/','Home'],['/create','Create group'],['/how-it-works','How it works'],['/help','Help & FAQ'],['/about','About']].map(([a,b])=><Link key={a} to={a} onClick={()=>setO(false)}>{b}</Link>)}</div>}</header>}
-export default function App(){const p=useLocation().pathname;let page:React.ReactNode=<Home/>;if(p==='/create')page=<Create/>;else if(p==='/how-it-works')page=<How/>;else if(p==='/help')page=<Help/>;else if(p==='/about')page=<About/>;else if(/^\/group\/[^/]+\/settlement\/?$/.test(p))page=<Settlement id={p.split('/')[2]}/>;else if(/^\/group\/[^/]+\/?$/.test(p))page=<Group id={p.split('/')[2]}/>;return <><Header/>{page}<footer><div><b>splitmate</b><span> · Shared expenses, settled simply</span></div><div><Link to="/how-it-works">How it works</Link> · <Link to="/help">FAQ</Link> · <Link to="/about">About</Link> · <span>ORION Agent Hackathon</span></div></footer></>}
-function Home(){return <main className="home-page"><section className="hero hero-reference"><div className="hero-copy"><p className="eyebrow">GROUP EXPENSES, WITHOUT THE HEADACHE</p><h1>Split the bill.<br/><span>Not the friendship.</span></h1><p>Create a shared trip, add expenses, and let the Agent work out who owes who. Settle in USDC on Base Sepolia when you are ready.</p><div className="actions"><Link className="btn" to="/create">Create a trip <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">See live demo</Link></div><small className="trust-line"><span>●</span> No account required · Testnet only</small></div><div className="hero-visual reference-visual"><div className="floating-agent-pill"><Sparkles size={14}/><div><b>Agent sees it</b><small>3 payments found</small></div></div><div className="settlement-hero-card"><div className="settlement-card-top"><div><b>Abuja Weekend</b><small>4 people</small></div><span className="card-menu">•••</span></div><div className="hero-total">$140.00</div><div className="hero-people"><div className="hero-person"><span className="mini-avatar blue">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="positive">+$50</strong></div><div className="hero-person"><span className="mini-avatar gold">A</span><div><b>Ahmed</b><small>paid $10</small></div><strong className="positive">+$10</strong></div><div className="hero-person"><span className="mini-avatar purple">J</span><div><b>John</b><small>paid $40</small></div><strong className="negative">-$60</strong></div></div><div className="hero-card-footer"><Sparkles size={13}/> Agent found the simplest settlement</div></div><div className="base-pill"><Wallet size={14}/><div><b>USDC on Base</b><small>Testnet payment</small></div></div></div></section><section className="home-proof"><div><span className="proof-number">01</span><div><b>Talk naturally</b><p>“Fawaz paid $50 for dinner for everyone.”</p></div></div><div><span className="proof-number">02</span><div><b>Agent works it out</b><p>Balances update without spreadsheets or commands.</p></div></div><div><span className="proof-number">03</span><div><b>Settle when ready</b><p>Review each payment and connect the wallet of the person paying.</p></div></div></section><section className="home-agent-section"><div><p className="eyebrow">THE AGENT</p><h2>Just tell Splitmate what happened.</h2><p>No special format. No buttons for every little action. Say it naturally and the Agent asks only for what is missing.</p><div className="home-quote">“Daddy paid $80 for dinner.”<span>→</span>“Who should split the $80?”</div></div><div className="home-flow-card"><div className="flow-row"><span className="flow-icon"><MessageCircle size={15}/></span><div><b>Expense</b><small>Natural language</small></div><Check size={16}/></div><div className="flow-line"/><div className="flow-row"><span className="flow-icon dark"><Sparkles size={15}/></span><div><b>Balance</b><small>Who owes who</small></div><Check size={16}/></div><div className="flow-line"/><div className="flow-row"><span className="flow-icon"><Wallet size={15}/></span><div><b>Settlement</b><small>Payment-specific wallet</small></div><Check size={16}/></div></div></section><section className="home-final-cta"><p className="eyebrow">ORION AGENT HACKATHON</p><h2>Split the money.<br/>Keep the friendship.</h2><p>Build the group in seconds and let Splitmate handle the math.</p><Link className="btn" to="/create">Create a trip <ArrowRight size={16}/></Link></section></main>}
-function Create(){const nav=useNavigate();const[name,setName]=useState('');const[people,setPeople]=useState<Person[]>([{id:uid(),name:''},{id:uid(),name:''}]);const[err,setErr]=useState('');const avatar=(id:string,file:File)=>{if(file.size>2e6)return setErr('Profile pictures must be under 2MB.');const r=new FileReader();r.onload=()=>setPeople(ps=>ps.map(p=>p.id===id?{...p,avatar:String(r.result)}:p));r.readAsDataURL(file)};const create=()=>{const ps=people.filter(p=>p.name.trim()).map(p=>({...p,name:p.name.trim()}));if(!name.trim()||ps.length<2)return setErr('Add a group name and at least two people.');const g={id:uid(),name:name.trim(),people:ps,expenses:[]};save(g);nav('/group/'+g.id)};return <main className="form"><p className="eyebrow">START A GROUP</p><h1>Create your group.</h1><p>Add your people. Profile pictures are optional, and wallets can be added later from Final Settlement.</p><div className="panel"><label>Group name<input value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. ORION Hackathon Team"/></label><h3>People</h3>{people.map((p,i)=><div className="person" key={p.id}><label className="avatar-upload"><Avatar p={p}/><span className="camera"><Camera size={11}/></span><input type="file" accept="image/*" onChange={e=>{const f=e.target.files?.[0];if(f)avatar(p.id,f)}}/></label><div><input value={p.name} onChange={e=>setPeople(a=>a.map(x=>x.id===p.id?{...x,name:e.target.value}:x))} placeholder={i?'Friend '+i:'Your name'}/><small>Profile picture optional</small></div>{people.length>2&&<button className="icon" onClick={()=>setPeople(a=>a.filter(x=>x.id!==p.id))}><X size={16}/></button>}</div>)}<button className="add" onClick={()=>setPeople(a=>[...a,{id:uid(),name:''}])}><Plus size={15}/> Add person</button>{err&&<p className="error">{err}</p>}<button className="btn full" onClick={create}>Create group <ArrowRight size={16}/></button></div></main>}
-function Group({id}:{id:string}){const[show,setShow]=useState(false);let g=useState<Group|undefined>(()=>load().find(x=>x.id===id))[0];if(!g&&id==='demo')g={id:'demo',name:'ORION Demo',people:[{id:'f',name:'Fawaz'},{id:'a',name:'Ahmed'},{id:'m',name:'Musa'},{id:'s',name:'Fatima'}],expenses:[{title:'Dinner',amount:80,paid:'f',split:['f','a','m','s']}]};if(!g)return <main className="empty"><h1>Group not found</h1><Link className="btn" to="/create">Create a group</Link></main>;return <GroupContent initial={g} show={show} setShow={setShow}/>}
-function GroupContent({initial,show,setShow}:{initial:Group,show:boolean,setShow:(v:boolean)=>void}){const[g,setG]=useState(initial);const update=(x:Group)=>{save(x);setG(x)};return <main><div className="trip-head"><div><p className="eyebrow">GROUP</p><h1>{g.name}</h1><p>{g.people.length} people · {money(g.expenses.reduce((a,e)=>a+e.amount,0))} shared</p></div><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><Link className="btn" to={`/group/${g.id}/settlement`}><Wallet size={16}/> Final settlement</Link><button className="ghost" onClick={()=>setShow(true)}><Plus size={16}/> Add expense</button></div></div><section className="trip-layout"><div className="panel"><h2>People</h2>{g.people.map(p=><div className="person row" key={p.id}><Avatar p={p}/><div><b>{p.name}</b><small>{p.wallet?'Wallet added':'Wallet can be added in settlement'}</small></div>{p.wallet&&<button className="icon" onClick={()=>navigator.clipboard?.writeText(p.wallet||'')}><Copy size={14}/></button>}</div>)}<h2 style={{marginTop:24}}>Expenses</h2>{g.expenses.length?g.expenses.map((e,i)=><div className="payment" key={i}><div><b>{e.title}</b><small>{money(e.amount)} · paid by {g.people.find(p=>p.id===e.paid)?.name}</small></div></div>):<p>No expenses yet. Tell the Agent what happened.</p>}</div><Agent trip={g} onExpenseAdded={e=>update({...g,expenses:[...g.expenses,e]})} onTripChanged={update}/></section>{show&&<ExpenseModal g={g} close={()=>setShow(false)}/>}<div className="settle-callout"><div><b>Done adding expenses?</b><small>Final Settlement is always here when you're ready.</small></div><Link className="btn" to={`/group/${g.id}/settlement`}>Final settlement <ArrowRight size={16}/></Link></div></main>}
-function ExpenseModal({g,close}:{g:Group,close:()=>void}){const[t,setT]=useState('');const[a,setA]=useState('');const[p,setP]=useState(g.people[0].id);const[s,setS]=useState(g.people.map(x=>x.id));const[e,setE]=useState('');const add=()=>{const n=Number(a);if(!t.trim()||!n||!s.length)return setE('Add a description, amount and at least one person.');save({...g,expenses:[...g.expenses,{title:t.trim(),amount:n,paid:p,split:s}]});location.reload()};return <div className="backdrop"><div className="modal"><button className="icon close" onClick={close}><X/></button><p className="eyebrow">ADD EXPENSE</p><h2>What happened?</h2><label>What was it?<input autoFocus value={t} onChange={x=>setT(x.target.value)} placeholder="Dinner, transport, tickets…"/></label><label>Amount<input type="number" value={a} onChange={x=>setA(x.target.value)} placeholder="50"/></label><label>Paid by<select value={p} onChange={x=>setP(x.target.value)}>{g.people.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></label><p><b>Split between</b></p>{g.people.map(x=><label className="check" key={x.id}><input type="checkbox" checked={s.includes(x.id)} onChange={v=>setS(q=>v.target.checked?[...q,x.id]:q.filter(z=>z!==x.id))}/>{x.name}</label>)}{e&&<p className="error">{e}</p>}<button className="btn full" onClick={add}>Add expense</button></div></div>}
-function Settlement({id}:{id:string}){const[g,setG]=useState<Group|undefined>(()=>load().find(x=>x.id===id));const[editing,setEditing]=useState<Person|null>(null);const[input,setInput]=useState('');const[connectFor,setConnectFor]=useState<{from:Person,to:Person,amount:number}|null>(null);const{address}=useAccount();const{openConnectModal}=useConnectModal();if(!g)return <main className="empty"><h1>Group not found</h1><Link className="btn" to="/create">Create a group</Link></main>;const b:Record<string,number>=Object.fromEntries(g.people.map(p=>[p.id,0]));g.expenses.forEach(e=>{b[e.paid]+=e.amount;e.split.forEach(x=>b[x]-=e.amount/e.split.length)});const debtors=g.people.filter(p=>b[p.id]<-.005).map(p=>({p,n:-b[p.id]})),creditors=g.people.filter(p=>b[p.id]>.005).map(p=>({p,n:b[p.id]}));const rows:{from:Person,to:Person,amount:number}[]=[];let i=0,j=0;while(i<debtors.length&&j<creditors.length){const n=Math.min(debtors[i].n,creditors[j].n);rows.push({from:debtors[i].p,to:creditors[j].p,amount:n});debtors[i].n-=n;creditors[j].n-=n;if(debtors[i].n<.005)i++;if(creditors[j].n<.005)j++}const needed=new Set<string>();rows.forEach(r=>{needed.add(r.from.id);needed.add(r.to.id)});const edit=(p:Person)=>{setEditing(p);setInput(p.wallet||'')};const saveWallet=()=>{if(!editing||!/^0x[a-fA-F0-9]{40}$/.test(input.trim()))return;const n={...g,people:g.people.map(p=>p.id===editing.id?{...p,wallet:input.trim()}:p)};save(n);setG(n);setEditing(null)};const missing=[...needed].filter(id=>!g.people.find(p=>p.id===id)?.wallet).length;return <main className="form"><Link className="ghost" to={`/group/${id}`}><ArrowLeft size={15}/> Back to group</Link><p className="eyebrow" style={{marginTop:28}}>FINAL SETTLEMENT</p><h1>Settle {g.name}.</h1><p>Review each payment, add recipient wallets, then connect the wallet of the person who is actually paying.</p><div className="panel"><div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}><div><p className="eyebrow">SETTLEMENT STATUS</p><h2>{rows.length?`${rows.length} payment${rows.length===1?'':'s'} needed`:'Everyone is settled'}</h2></div>{rows.length>0&&<span className={missing===0?'success':'warning'}>{missing===0?'Payments ready':`${missing} wallet${missing===1?'':'s'} needed`}</span>}</div>{rows.map((r,k)=>{const payerReady=!!r.from.wallet;const recipientReady=!!r.to.wallet;return <div className="payment" key={k}><div style={{flex:1}}><div style={{display:'flex',alignItems:'center',gap:9,flexWrap:'wrap'}}><Avatar p={r.from} size={38}/><b>{r.from.name}</b><span>pays</span><Avatar p={r.to} size={38}/><b>{r.to.name}</b></div><small>Payment-specific settlement</small></div><div style={{textAlign:'right'}}><b>{money(r.amount)} USDC</b><small className={payerReady&&recipientReady?'success':'warning'}>{payerReady&&recipientReady?'Recipient ready':'Wallet setup needed'}</small><div style={{marginTop:8}}>{payerReady&&recipientReady?<button className="btn small" onClick={()=>setConnectFor(r)}><Wallet size={14}/> Connect {r.from.name}</button>:<small>Add the missing wallet(s) below</small>}</div></div></div>})}</div>{rows.length>0&&<section className="panel" style={{marginTop:18}}><p className="eyebrow">RECIPIENT WALLETS</p><h2>Payment wallets</h2><p>These saved addresses identify the people involved in each settlement. They do not authorize a payment.</p>{g.people.filter(p=>needed.has(p.id)).map(p=><button key={p.id} className="person row" style={{width:'100%',border:0,background:'transparent',textAlign:'left',cursor:'pointer'}} onClick={()=>edit(p)}><Avatar p={p}/><div style={{flex:1}}><b>{p.name}</b><small>{p.wallet?`${p.wallet.slice(0,8)}…${p.wallet.slice(-6)}`:'Wallet not added · Tap to add'}</small></div>{p.wallet?<Check size={17}/>:<Wallet size={17}/>}</button>)}</section>}{editing&&<div className="backdrop"><div className="modal"><button className="icon close" onClick={()=>setEditing(null)}><X/></button><p className="eyebrow">WALLET SETUP</p><h2>{editing.wallet?'Change':'Add'} {editing.name}'s wallet</h2><p>Save this person's recipient address for settlement.</p><label>Base / EVM wallet address<input autoFocus value={input} onChange={e=>setInput(e.target.value)} placeholder="0x…"/></label>{input&&!/^0x[a-fA-F0-9]{40}$/.test(input.trim())&&<p className="error">Enter a valid EVM wallet address.</p>}<div style={{display:'flex',gap:8,marginTop:16}}><button className="ghost" onClick={()=>setEditing(null)}>Cancel</button><button className="btn" disabled={!/^0x[a-fA-F0-9]{40}$/.test(input.trim())} onClick={saveWallet}>Save wallet</button></div></div></div>}{connectFor&&<div className="backdrop"><div className="modal"><button className="icon close" onClick={()=>setConnectFor(null)}><X/></button><p className="eyebrow">PAYMENT WALLET</p><h2>Connect wallet for {connectFor.from.name}</h2><p><b>{connectFor.from.name} pays {connectFor.to.name} {money(connectFor.amount)} USDC.</b></p><p>The wallet connected here is for <b>{connectFor.from.name}</b> to approve this specific payment. A saved wallet address is not permission to spend from it.</p>{address?<div className="success"><Check size={16}/> Connected wallet · {address.slice(0,8)}…{address.slice(-6)}</div>:<button className="btn full" onClick={()=>openConnectModal?.()}><Wallet size={16}/> Connect {connectFor.from.name}'s wallet</button>}<small style={{display:'block',marginTop:12}}>Only the person who owns this wallet should connect and approve the payment.</small>{address&&<button className="btn full" style={{marginTop:12}} onClick={()=>setConnectFor(null)}>Continue to review</button>}</div></div>}</main>}
-function How(){return <main className="form"><p className="eyebrow">HOW IT WORKS</p><h1>From a sentence to a settlement.</h1><div className="panel"><h2>1. Create a group</h2><p>Add your people and optional profile pictures.</p><h2>2. Talk naturally</h2><p>Say what happened. The Agent asks only for missing details and remembers your answers.</p><h2>3. Confirm</h2><p>The expense is reviewed before it changes your group.</p><h2>4. Final Settlement</h2><p>See who pays who, add missing recipient wallets, connect the approving wallet, and review the payment.</p></div></main>}
-function Help(){return <main className="form"><p className="eyebrow">HELP & FAQ</p><h1>Questions, answered.</h1><div className="faq-grid"><details><summary>What is Splitmate?</summary><p>A shared-expense app that lets groups track spending and prepare settlement without doing the math manually.</p></details><details><summary>What if the Agent doesn't understand?</summary><p>It should ask for the next missing detail instead of guessing. You can also reset the conversation and try again.</p></details><details><summary>What if a user has no wallet?</summary><p>Open Final Settlement and tap that person. Their own wallet form opens without leaving settlement.</p></details><details><summary>What's the difference between a saved wallet and Connect Wallet?</summary><p>A saved wallet is a person's recipient address. Connect Wallet is opened for the specific person who must approve that payment.</p></details><details><summary>Do I have to use the Agent?</summary><p>No. You can still add an expense manually and use Final Settlement directly.</p></details></div></main>}
-function About(){return <main className="about"><p className="eyebrow">ORION AGENT HACKATHON</p><h1>Agent prepares. Humans approve.</h1><p>Splitmate turns everyday shared expenses into a clear group balance and a simple settlement flow. The Agent coordinates the work while users stay in control of payments.</p><div className="panel"><Sparkles/><h2>Built for shared money</h2><p>Friends, roommates, trips, teams, events, families, and communities.</p></div></main>}
+import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  ArrowRight, Camera, Check, Copy, MessageCircle, Plus, Sparkles, Wallet, X,
+} from 'lucide-react';
+import Agent from './Agent';
+import SiteNav, { SiteFooter } from './SiteNav';
+import EnhancedCreate from './pages/EnhancedCreate';
+import SettlementPage from './pages/SettlementPage';
+import { money } from './settlement';
+import type { Expense, Group, Person } from './types';
+import { usePersistentGroup } from './usePersistentGroup';
+
+function Avatar({ person, size = 48 }: { person: Person; size?: number }) {
+  return <div className="avatar" style={{ width: size, height: size }}>
+    {person.avatar ? <img src={person.avatar} alt=""/> : person.name?.[0]?.toUpperCase() || '?'}
+  </div>;
+}
+
+export default function App() {
+  const path = useLocation().pathname;
+  const settlementMatch = path.match(/^\/group\/([^/]+)\/settlement\/?$/);
+  const groupMatch = path.match(/^\/group\/([^/]+)\/?$/);
+  let page: React.ReactNode = <Home/>;
+  if (path === '/create') page = <EnhancedCreate/>;
+  else if (path === '/how-it-works') page = <HowItWorks/>;
+  else if (path === '/help') page = <Help/>;
+  else if (path === '/about') page = <About/>;
+  else if (settlementMatch) page = <SettlementPage key={settlementMatch[1]} id={settlementMatch[1]}/>;
+  else if (groupMatch) page = <GroupPage key={groupMatch[1]} id={groupMatch[1]}/>;
+  return <><SiteNav/>{page}<SiteFooter/></>;
+}
+
+function Home() {
+  return <main className="home-page">
+    <section className="hero hero-reference">
+      <div className="hero-copy">
+        <p className="eyebrow">GROUP EXPENSES, WITHOUT THE HEADACHE</p>
+        <h1>Split the bill.<br/><span>Not the friendship.</span></h1>
+        <p>Create a shared group, add expenses, and let the Agent work out who owes whom. When everyone is ready, settle with native USDC on Base mainnet.</p>
+        <div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">See live demo</Link></div>
+        <small className="trust-line"><span>●</span> No account required · Every payment needs wallet approval</small>
+      </div>
+      <div className="hero-visual reference-visual">
+        <div className="floating-agent-pill"><Sparkles size={14}/><div><b>Agent sees it</b><small>3 payments found</small></div></div>
+        <div className="settlement-hero-card">
+          <div className="settlement-card-top"><div><b>Abuja Weekend</b><small>4 people</small></div><span className="card-menu">•••</span></div>
+          <div className="hero-total">$140.00</div>
+          <div className="hero-people">
+            <div className="hero-person"><span className="mini-avatar blue">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="positive">+$50</strong></div>
+            <div className="hero-person"><span className="mini-avatar gold">A</span><div><b>Ahmed</b><small>paid $10</small></div><strong className="positive">+$10</strong></div>
+            <div className="hero-person"><span className="mini-avatar purple">J</span><div><b>John</b><small>paid $40</small></div><strong className="negative">-$60</strong></div>
+          </div>
+          <div className="hero-card-footer"><Sparkles size={13}/> Agent found the simplest settlement</div>
+        </div>
+        <div className="base-pill"><Wallet size={14}/><div><b>USDC on Base</b><small>Mainnet payment</small></div></div>
+      </div>
+    </section>
+    <section className="home-proof">
+      <div><span className="proof-number">01</span><div><b>Talk naturally</b><p>“Fawaz paid $50 for dinner for everyone.”</p></div></div>
+      <div><span className="proof-number">02</span><div><b>Agent works it out</b><p>Balances update without spreadsheets or commands.</p></div></div>
+      <div><span className="proof-number">03</span><div><b>Settle when ready</b><p>Review each payment and connect the exact wallet saved for the payer.</p></div></div>
+    </section>
+    <section className="home-agent-section">
+      <div><p className="eyebrow">THE AGENT</p><h2>Just tell Splitmate what happened.</h2><p>No special format. Say it naturally, choose who “I” means, and confirm every change before it is saved.</p><div className="home-quote">“I paid $80 for dinner.”<span>→</span>“Who should split the $80?”</div></div>
+      <div className="home-flow-card">
+        <div className="flow-row"><span className="flow-icon"><MessageCircle size={15}/></span><div><b>Expense</b><small>Natural language</small></div><Check size={16}/></div><div className="flow-line"/>
+        <div className="flow-row"><span className="flow-icon dark"><Sparkles size={15}/></span><div><b>Balance</b><small>Who owes whom</small></div><Check size={16}/></div><div className="flow-line"/>
+        <div className="flow-row"><span className="flow-icon"><Wallet size={15}/></span><div><b>Settlement</b><small>Payer-approved Base USDC</small></div><Check size={16}/></div>
+      </div>
+    </section>
+    <section className="home-final-cta"><p className="eyebrow">ORION AGENT HACKATHON</p><h2>Split the money.<br/>Keep the friendship.</h2><p>Build the group in seconds and let Splitmate handle the math.</p><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
+  </main>;
+}
+
+function GroupPage({ id }: { id: string }) {
+  const { group, loading, error, updateGroup, isDemo } = usePersistentGroup(id);
+  const [showExpense, setShowExpense] = useState(false);
+  if (loading && !group) return <main className="empty"><p>Loading group…</p></main>;
+  if (!group) return <main className="empty"><h1>Group not found</h1><p>{error || 'This group is not available in this browser.'}</p><Link className="btn" to="/create">Create a group</Link></main>;
+
+  const addExpense = async (expense: Expense) => {
+    await updateGroup({ ...group, expenses: [...group.expenses, expense] });
+    setShowExpense(false);
+  };
+
+  return <main className="group-page">
+    <div className="trip-head">
+      <div><p className="eyebrow">{isDemo ? 'DEMO GROUP' : 'GROUP'}</p><h1>{group.name}</h1><p>{group.people.length} people · {money(group.expenses.reduce((sum, expense) => sum + expense.amount, 0))} shared</p></div>
+      <div className="trip-actions"><Link className="btn" to={`/group/${group.id}/settlement`}><Wallet size={16}/> Final settlement</Link><button className="ghost" onClick={() => setShowExpense(true)}><Plus size={16}/> Add expense</button></div>
+    </div>
+    {error && <p className="error" role="alert">{error}</p>}
+    {isDemo && <p className="demo-notice compact-demo">This is a safe preview. Demo changes stay in this tab and no payment can be sent.</p>}
+    <section className="trip-layout">
+      <div className="panel">
+        <h2>People</h2>
+        {group.people.map((person) => <div className="person row" key={person.id}>
+          <Avatar person={person}/><div><b>{person.name}</b><small>{person.wallet ? 'Wallet added' : 'Wallet can be added in settlement'}</small></div>
+          {person.wallet && <button className="icon" aria-label={`Copy ${person.name}'s wallet`} onClick={() => navigator.clipboard.writeText(person.wallet || '')}><Copy size={14}/></button>}
+        </div>)}
+        <h2 className="expenses-heading">Expenses</h2>
+        {group.expenses.length ? group.expenses.map((expense) => <div className="payment" key={expense.id}><div><b>{expense.title}</b><small>{money(expense.amount)} · paid by {group.people.find((person) => person.id === expense.paid)?.name}</small></div></div>) : <p>No expenses yet. Tell the Agent what happened.</p>}
+      </div>
+      <Agent key={group.id} trip={group} onTripChanged={updateGroup}/>
+    </section>
+    {showExpense && <ExpenseModal group={group} onAdd={addExpense} close={() => setShowExpense(false)}/>}
+    <div className="settle-callout"><div><b>Done adding expenses?</b><small>Final Settlement is always here when you are ready.</small></div><Link className="btn" to={`/group/${group.id}/settlement`}>Final settlement <ArrowRight size={16}/></Link></div>
+  </main>;
+}
+
+function ExpenseModal({ group, onAdd, close }: { group: Group; onAdd: (expense: Expense) => Promise<void>; close: () => void }) {
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [paidBy, setPaidBy] = useState(group.people[0].id);
+  const [split, setSplit] = useState(group.people.map((person) => person.id));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const add = async () => {
+    const value = Number(amount);
+    if (!title.trim() || !Number.isFinite(value) || value <= 0 || !split.length) {
+      setError('Add a description, a positive amount, and at least one person.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await onAdd({ id: crypto.randomUUID(), title: title.trim(), amount: value, paid: paidBy, split });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'The expense could not be saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <div className="backdrop"><div className="modal">
+    <button className="icon close" aria-label="Close expense form" onClick={close}><X/></button><p className="eyebrow">ADD EXPENSE</p><h2>What happened?</h2>
+    <label>What was it?<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Dinner, transport, tickets…" maxLength={120}/></label>
+    <label>Amount<input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="50"/></label>
+    <label>Paid by<select value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>{group.people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
+    <p><b>Split between</b></p>
+    {group.people.map((person) => <label className="check" key={person.id}><input type="checkbox" checked={split.includes(person.id)} onChange={(event) => setSplit((current) => event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id))}/>{person.name}</label>)}
+    {error && <p className="error" role="alert">{error}</p>}<button className="btn full" onClick={add} disabled={saving}>{saving ? 'Saving…' : 'Add expense'}</button>
+  </div></div>;
+}
+
+function HowItWorks() {
+  return <main className="form"><p className="eyebrow">HOW IT WORKS</p><h1>From a sentence to a settlement.</h1><div className="panel">
+    <h2>1. Create a group</h2><p>Add people, optional profile pictures, and optional Base wallet addresses.</p>
+    <h2>2. Talk naturally</h2><p>Choose which member you are, then tell the Agent what happened. It remembers the conversation and asks only for missing details.</p>
+    <h2>3. Confirm every change</h2><p>Review Agent actions before expenses, edits, deletions, or people are saved to the group.</p>
+    <h2>4. Settle on Base</h2><p>Review who pays whom, connect the exact saved payer wallet, and approve the native USDC transfer. A payment only counts after it confirms onchain.</p>
+  </div></main>;
+}
+
+function Help() {
+  return <main className="form"><p className="eyebrow">HELP & FAQ</p><h1>Questions, answered.</h1><div className="faq-grid">
+    <details><summary>What is Splitmate?</summary><p>A shared-expense app that tracks group spending, calculates balances, and settles in native USDC on Base.</p></details>
+    <details><summary>Does the Agent change my group automatically?</summary><p>No. Any add, edit, delete, or member change appears as a review card that you must confirm first.</p></details>
+    <details><summary>What if someone has no wallet?</summary><p>Open Final Settlement and tap that person to add their Base wallet without leaving the settlement screen.</p></details>
+    <details><summary>What is the difference between a saved wallet and Connect Wallet?</summary><p>A saved address identifies the payer or recipient. Connecting a wallet lets its owner approve one specific payment. Splitmate checks that the connected payer wallet matches the saved address.</p></details>
+    <details><summary>When is a payment counted?</summary><p>Only after the USDC transfer confirms on Base. Submitted and failed transactions do not reduce the outstanding balance.</p></details>
+    <details><summary>Do I have to use the Agent?</summary><p>No. You can add an expense manually and use Final Settlement directly.</p></details>
+  </div></main>;
+}
+
+function About() {
+  return <main className="about"><p className="eyebrow">ORION AGENT HACKATHON</p><h1>Agent prepares. Humans approve.</h1><p>Splitmate turns everyday shared expenses into a clear group balance and a simple Base settlement flow. The Agent coordinates the work while users stay in control of every saved change and payment.</p><div className="panel"><Sparkles/><h2>Built for shared money</h2><p>Friends, roommates, teams, trips, events, families, and communities.</p></div></main>;
+}

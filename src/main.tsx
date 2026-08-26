@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, useLocation } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit';
@@ -10,16 +10,8 @@ import './home-reference.css';
 import './ux-polish.css';
 import { config } from './wagmi';
 import App from './App';
-import EnhancedCreate from './pages/EnhancedCreate';
-import SiteNav from './SiteNav';
 
 const queryClient = new QueryClient();
-
-function Root(){
-  const location=useLocation();
-  if(location.pathname==='/create') return <><SiteNav/><EnhancedCreate/></>;
-  return <App/>;
-}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -27,7 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>
           <BrowserRouter>
-            <Root />
+            <App />
           </BrowserRouter>
         </RainbowKitProvider>
       </QueryClientProvider>
