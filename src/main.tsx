@@ -9,12 +9,13 @@ import './styles.css';
 import { config } from './wagmi';
 import App from './App';
 import EnhancedCreate from './pages/EnhancedCreate';
+import SiteNav from './SiteNav';
 
 const queryClient = new QueryClient();
 
 function Root(){
   const location=useLocation();
-  if(location.pathname==='/create') return <EnhancedCreate/>;
+  if(location.pathname==='/create') return <><SiteNav/><EnhancedCreate/></>;
   return <App/>;
 }
 
