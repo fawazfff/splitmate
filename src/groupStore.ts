@@ -3,6 +3,7 @@ import type { Group } from './types';
 const STORAGE_KEY = 'splitmate.groups.v2';
 const LEGACY_KEY = 'splitmate.groups';
 const CLIENT_KEY = 'splitmate.client-id';
+const REQUEST_TIMEOUT_MS = 12_000;
 
 function normalizeGroup(value: Partial<Group>): Group | null {
   if (!value.id || !value.name || !Array.isArray(value.people) || !Array.isArray(value.expenses)) {
@@ -61,10 +62,25 @@ async function parseResponse(response: Response) {
   return data;
 }
 
+async function requestWithTimeout(input: RequestInfo | URL, init: RequestInit) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (reason) {
+    if (reason instanceof DOMException && reason.name === 'AbortError') {
+      throw new Error('Cloud sync took too long. Your group is saved on this device and will retry when you make your next change.');
+    }
+    throw reason;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 export async function persistGroup(group: Group): Promise<Group> {
   if (group.id === 'demo') return group;
   cacheGroup(group);
-  const response = await fetch('/api/groups', {
+  const response = await requestWithTimeout('/api/groups', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ clientId: getClientId(), group }),
@@ -78,7 +94,7 @@ export async function persistGroup(group: Group): Promise<Group> {
 export async function fetchGroup(id: string): Promise<Group | undefined> {
   if (id === 'demo') return undefined;
   const params = new URLSearchParams({ id, clientId: getClientId() });
-  const response = await fetch(`/api/groups?${params.toString()}`);
+  const response = await requestWithTimeout(`/api/groups?${params.toString()}`, { method: 'GET' });
   if (response.status === 404) return undefined;
   const data = await parseResponse(response);
   const group = normalizeGroup(data.group);
@@ -88,7 +104,7 @@ export async function fetchGroup(id: string): Promise<Group | undefined> {
 
 export async function fetchRecentGroups(): Promise<Group[]> {
   const params = new URLSearchParams({ clientId: getClientId() });
-  const response = await fetch(`/api/groups?${params.toString()}`);
+  const response = await requestWithTimeout(`/api/groups?${params.toString()}`, { method: 'GET' });
   const data = await parseResponse(response);
   const groups = Array.isArray(data.groups)
     ? data.groups.map(normalizeGroup).filter((group: Group | null): group is Group => Boolean(group))
