@@ -7,15 +7,22 @@ export function supabaseReady() {
 
 export async function sb(path: string, options: RequestInit = {}) {
   if (!url || !key) throw new Error('Supabase is not configured in Vercel.');
-  return fetch(`${url}/rest/v1/${path}`, {
-    ...options,
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+  try {
+    return await fetch(`${url}/rest/v1/${path}`, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
+      },
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function sbJson(
