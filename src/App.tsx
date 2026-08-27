@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  ArrowRight, Camera, Check, Copy, MessageCircle, Plus, Sparkles, Wallet, X,
+  ArrowRight, Camera, Copy, Plus, Wallet, X,
 } from 'lucide-react';
 import Agent from './Agent';
 import SiteNav, { SiteFooter } from './SiteNav';
@@ -26,57 +26,48 @@ export default function App() {
   else if (path === '/how-it-works') page = <HowItWorks/>;
   else if (path === '/help') page = <Help/>;
   else if (path === '/about') page = <About/>;
+  else if (path === '/privacy') page = <Legal title="Privacy"/>;
+  else if (path === '/terms') page = <Legal title="Terms of use"/>;
   else if (settlementMatch) page = <SettlementPage key={settlementMatch[1]} id={settlementMatch[1]}/>;
   else if (groupMatch) page = <GroupPage key={groupMatch[1]} id={groupMatch[1]}/>;
-  return <><SiteNav/>{page}<SiteFooter/></>;
+  return <><a className="skip-link" href="#main-content">Skip to content</a><SiteNav/>{page}<SiteFooter/></>;
 }
 
 function Home() {
-  return <main className="home-page">
-    <section className="hero hero-reference">
-      <div className="hero-copy">
-        <p className="eyebrow">GROUP EXPENSES, WITHOUT THE HEADACHE</p>
-        <h1>Split the bill.<br/><span>Not the friendship.</span></h1>
-        <p>Create a shared group, add expenses, and let the Agent work out who owes whom. When everyone is ready, settle with native USDC on Base mainnet.</p>
-        <div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">See live demo</Link></div>
-        <small className="trust-line"><span>●</span> No account required · Every payment needs wallet approval</small>
+  return <main id="main-content" className="home-page home-editorial">
+    <section className="home-intro">
+      <div className="home-intro-copy">
+        <p className="eyebrow">SPLITMATE / SHARED EXPENSES</p>
+        <h1>Shared money, made clear.</h1>
+        <p>Make a group, record what happened, and see the cleanest way to settle. The Agent suggests changes. Your group confirms them.</p>
+        <div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">Open working demo</Link></div>
+        <p className="home-note">No account required. A wallet is only connected by the person making a settlement payment.</p>
       </div>
-      <div className="hero-visual reference-visual">
-        <div className="floating-agent-pill"><Sparkles size={14}/><div><b>Agent sees it</b><small>3 payments found</small></div></div>
-        <div className="settlement-hero-card">
-          <div className="settlement-card-top"><div><b>Abuja Weekend</b><small>4 people</small></div><span className="card-menu">•••</span></div>
-          <div className="hero-total">$140.00</div>
-          <div className="hero-people">
-            <div className="hero-person"><span className="mini-avatar blue">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="positive">+$50</strong></div>
-            <div className="hero-person"><span className="mini-avatar gold">A</span><div><b>Ahmed</b><small>paid $10</small></div><strong className="positive">+$10</strong></div>
-            <div className="hero-person"><span className="mini-avatar purple">J</span><div><b>John</b><small>paid $40</small></div><strong className="negative">-$60</strong></div>
-          </div>
-          <div className="hero-card-footer"><Sparkles size={13}/> Agent found the simplest settlement</div>
-        </div>
-        <div className="base-pill"><Wallet size={14}/><div><b>USDC on Base</b><small>Mainnet payment</small></div></div>
+      <div className="home-live-preview" aria-label="Example of a Splitmate group">
+        <div className="preview-bar"><span>LIVE EXAMPLE</span><Link to="/group/demo">View demo</Link></div>
+        <div className="preview-title"><div><b>Abuja Weekend</b><small>4 people · $140.00 shared</small></div><strong>Ready to settle</strong></div>
+        <div className="preview-ledger"><span>Fawaz paid for dinner</span><b>$90.00</b></div>
+        <div className="preview-ledger"><span>Ahmed paid for transport</span><b>$10.00</b></div>
+        <div className="preview-result"><span>Suggested settlement</span><b>2 payments</b></div>
       </div>
     </section>
-    <section className="home-proof">
-      <div><span className="proof-number">01</span><div><b>Talk naturally</b><p>“Fawaz paid $50 for dinner for everyone.”</p></div></div>
-      <div><span className="proof-number">02</span><div><b>Agent works it out</b><p>Balances update without spreadsheets or commands.</p></div></div>
-      <div><span className="proof-number">03</span><div><b>Settle when ready</b><p>Review each payment and connect the exact wallet saved for the payer.</p></div></div>
+    <section className="home-steps" aria-label="How Splitmate works">
+      <article><span>01</span><h2>Capture expenses</h2><p>Add an expense yourself or say it naturally to the Agent.</p></article>
+      <article><span>02</span><h2>Review the split</h2><p>Every Agent change waits for confirmation before it affects your group.</p></article>
+      <article><span>03</span><h2>Settle with clarity</h2><p>See who pays whom. Payments use native USDC on Base only after wallet approval.</p></article>
     </section>
-    <section className="home-agent-section">
-      <div><p className="eyebrow">THE AGENT</p><h2>Just tell Splitmate what happened.</h2><p>No special format. Say it naturally, choose who “I” means, and confirm every change before it is saved.</p><div className="home-quote">“I paid $80 for dinner.”<span>→</span>“Who should split the $80?”</div></div>
-      <div className="home-flow-card">
-        <div className="flow-row"><span className="flow-icon"><MessageCircle size={15}/></span><div><b>Expense</b><small>Natural language</small></div><Check size={16}/></div><div className="flow-line"/>
-        <div className="flow-row"><span className="flow-icon dark"><Sparkles size={15}/></span><div><b>Balance</b><small>Who owes whom</small></div><Check size={16}/></div><div className="flow-line"/>
-        <div className="flow-row"><span className="flow-icon"><Wallet size={15}/></span><div><b>Settlement</b><small>Payer-approved Base USDC</small></div><Check size={16}/></div>
-      </div>
+    <section className="home-agent-proof">
+      <div><p className="eyebrow">THE SPLITMATE AGENT</p><h2>Say what happened in your own words.</h2><p>“Ahmed paid $60 for transport split with Fawaz and Musa.” Splitmate identifies the payer, the amount, and the people included, then shows the change for review.</p></div>
+      <div className="agent-transcript"><p><span>You</span> Ahmed paid $60 for transport split with Fawaz and Musa.</p><p><span>Splitmate</span> I found a $60.00 transport expense paid by Ahmed, split between Ahmed, Fawaz, and Musa.</p><Link className="text-link" to="/group/demo">Try it in the live demo <ArrowRight size={15}/></Link></div>
     </section>
-    <section className="home-final-cta"><p className="eyebrow">ORION AGENT HACKATHON</p><h2>Split the money.<br/>Keep the friendship.</h2><p>Build the group in seconds and let Splitmate handle the math.</p><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
+    <section className="home-closing"><div><p className="eyebrow">READY WHEN THE GROUP IS</p><h2>Stop doing the math.</h2><p>Start a group and keep the focus on the people, not the spreadsheet.</p></div><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
   </main>;
 }
 
 function GroupPage({ id }: { id: string }) {
   const { group, loading, error, updateGroup, isDemo } = usePersistentGroup(id);
   const [showExpense, setShowExpense] = useState(false);
-  if (loading && !group) return <main className="empty"><p>Loading group…</p></main>;
+  if (loading && !group) return <main id="main-content" className="loading-page" aria-busy="true"><p className="eyebrow">OPENING GROUP</p><div className="skeleton skeleton-title"/><div className="skeleton skeleton-line"/><div className="skeleton skeleton-panel"/></main>;
   if (!group) return <main className="empty"><h1>Group not found</h1><p>{error || 'This group is not available in this browser.'}</p><Link className="btn" to="/create">Create a group</Link></main>;
 
   const addExpense = async (expense: Expense) => {
@@ -84,7 +75,7 @@ function GroupPage({ id }: { id: string }) {
     setShowExpense(false);
   };
 
-  return <main className="group-page">
+  return <main id="main-content" className="group-page">
     <div className="trip-head">
       <div><p className="eyebrow">{isDemo ? 'DEMO GROUP' : 'GROUP'}</p><h1>{group.name}</h1><p>{group.people.length} people · {money(group.expenses.reduce((sum, expense) => sum + expense.amount, 0))} shared</p></div>
       <div className="trip-actions"><Link className="btn" to={`/group/${group.id}/settlement`}><Wallet size={16}/> Final settlement</Link><button className="ghost" onClick={() => setShowExpense(true)}><Plus size={16}/> Add expense</button></div>
@@ -104,7 +95,7 @@ function GroupPage({ id }: { id: string }) {
       <Agent key={group.id} trip={group} onTripChanged={updateGroup}/>
     </section>
     {showExpense && <ExpenseModal group={group} onAdd={addExpense} close={() => setShowExpense(false)}/>}
-    <div className="settle-callout"><div><b>Done adding expenses?</b><small>Final Settlement is always here when you are ready.</small></div><Link className="btn" to={`/group/${group.id}/settlement`}>Final settlement <ArrowRight size={16}/></Link></div>
+    <div className="settle-callout"><div><b>Ready to settle?</b><small>Review the suggested payments whenever the group is ready.</small></div><Link className="btn" to={`/group/${group.id}/settlement`}>Review settlement <ArrowRight size={16}/></Link></div>
   </main>;
 }
 
@@ -162,5 +153,12 @@ function Help() {
 }
 
 function About() {
-  return <main className="about"><p className="eyebrow">ORION AGENT HACKATHON</p><h1>Agent prepares. Humans approve.</h1><p>Splitmate turns everyday shared expenses into a clear group balance and a simple Base settlement flow. The Agent coordinates the work while users stay in control of every saved change and payment.</p><div className="panel"><Sparkles/><h2>Built for shared money</h2><p>Friends, roommates, teams, trips, events, families, and communities.</p></div></main>;
+  return <main id="main-content" className="about"><p className="eyebrow">ORION AGENT HACKATHON</p><h1>Agent prepares. Humans approve.</h1><p>Splitmate turns everyday shared expenses into a clear group balance and a simple Base settlement flow. The Agent coordinates the work while users stay in control of every saved change and payment.</p><div className="panel"><p className="eyebrow">BUILT FOR SHARED MONEY</p><h2>Friends, roommates, teams, trips, events, families, and communities.</h2><p>The same simple record for any group that shares costs.</p></div></main>;
+}
+
+function Legal({ title }: { title: 'Privacy' | 'Terms of use' }) {
+  const privacy = title === 'Privacy';
+  return <main id="main-content" className="legal form"><p className="eyebrow">SPLITMATE</p><h1>{title}</h1><div className="panel">
+    {privacy ? <><h2>Your group data</h2><p>Splitmate stores the group details, expenses, and Agent conversation needed to provide the service. Wallet addresses are used only to identify settlement participants. Splitmate never stores wallet private keys.</p><h2>Payments</h2><p>Every USDC payment is approved in the payer’s own wallet. Onchain transactions are public and governed by the Base network.</p><h2>Questions</h2><p>For project questions, use the contact details supplied with the Splitmate project.</p></> : <><h2>Use of Splitmate</h2><p>Splitmate helps groups calculate shared expenses. You are responsible for checking all expenses, recipient addresses, and payment details before confirming a transaction.</p><h2>No financial advice</h2><p>Settlement suggestions are calculations, not financial advice. Blockchain transactions cannot be reversed once confirmed.</p><h2>Wallet responsibility</h2><p>Only connect a wallet you control. Splitmate does not have access to your private keys and cannot send a payment without your wallet approval.</p></>}
+  </div></main>;
 }
