@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getClientId } from './groupStore';
-import { calculateBalances } from './settlement';
+import { calculateBalances, calculateSettlementRows } from './settlement';
 import type { AgentAction, AgentMessage, Expense, Group, Person } from './types';
 
 type AgentProps = {
@@ -72,6 +72,12 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     const values = calculateBalances(trip);
     return trip.people.map((person) => ({ ...person, balance: Number((values[person.id] || 0).toFixed(2)) }));
   }, [trip]);
+  const settlementRows = useMemo(() => calculateSettlementRows(trip), [trip]);
+  const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.text;
+  const latestAction = [...messages].reverse().find((message) => message.role === 'agent' && message.action)?.action || null;
+  const pendingAction = latestAction && 'confirmed' in latestAction && !latestAction.confirmed ? latestAction : null;
+  const missingWallets = settlementRows.filter((row) => !row.from.wallet || !row.to.wallet).length;
+  const runNumber = messages.filter((message) => message.role === 'user').length;
   const currentPerson = balances.find((person) => person.id === currentPersonId);
   const biggest = trip.expenses.reduce<Expense | null>(
     (largest, expense) => (!largest || expense.amount > largest.amount ? expense : largest),
@@ -79,8 +85,8 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
   );
   const exampleName = currentPerson?.name || trip.people[0]?.name || 'I';
   const suggestions = trip.expenses.length
-    ? [`${exampleName} paid $50 for dinner for everyone`, 'Explain my balance', 'Who owes who?']
-    : [`${exampleName} paid $50 for dinner for everyone`, 'How much do I owe?', 'Who owes who?'];
+    ? [`${exampleName} paid $50 for dinner for everyone`, 'Explain my balance', 'Prepare settlement']
+    : [`${exampleName} paid $50 for dinner for everyone`, 'How much do I owe?', 'Prepare settlement'];
   const personName = (id: string) => trip.people.find((person) => person.id === id)?.name || 'Unknown';
 
   const send = async (override?: string) => {
@@ -231,12 +237,45 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     return '';
   };
 
+  const runEvidence = () => {
+    const steps: Array<{ label: string; detail: string; state: 'done' | 'pending' }> = [{
+      label: 'Group state loaded',
+      detail: `${trip.people.length} people · ${trip.expenses.length} expenses · $${total.toFixed(2)} recorded`,
+      state: 'done',
+    }];
+    if (latestUserMessage) steps.push({ label: 'Instruction received', detail: latestUserMessage, state: 'done' });
+    if (latestAction?.type === 'add_expense') {
+      steps.push({ label: 'Expense resolved', detail: `${personName(latestAction.paidBy)} paid $${latestAction.amount.toFixed(2)} for ${latestAction.title}`, state: 'done' });
+      steps.push({ label: pendingAction ? 'Waiting for group review' : 'Ledger updated', detail: pendingAction ? `Split between ${latestAction.splitBetween.map(personName).join(', ')}` : 'Confirmed expense saved to the group', state: pendingAction ? 'pending' : 'done' });
+    } else if (latestAction?.type === 'add_expenses') {
+      steps.push({ label: 'Expenses resolved', detail: `${latestAction.expenses.length} expenses prepared from the instruction`, state: 'done' });
+      steps.push({ label: pendingAction ? 'Waiting for group review' : 'Ledger updated', detail: pendingAction ? 'Review the proposed group changes' : 'Confirmed expenses saved to the group', state: pendingAction ? 'pending' : 'done' });
+    } else if (latestAction?.type === 'update_expense' || latestAction?.type === 'delete_expense' || latestAction?.type === 'add_person') {
+      steps.push({ label: pendingAction ? 'Change prepared' : 'Group updated', detail: confirmationCopy(latestAction), state: pendingAction ? 'pending' : 'done' });
+    } else if (latestAction?.type === 'show_settlement') {
+      steps.push({ label: 'Settlement calculated', detail: settlementRows.length ? `${settlementRows.length} payment${settlementRows.length === 1 ? '' : 's'} minimize the group’s outstanding balances` : 'The group is already settled', state: 'done' });
+      steps.push({ label: missingWallets ? 'Wallet details needed' : 'Waiting for payer approval', detail: missingWallets ? `${missingWallets} payment route${missingWallets === 1 ? ' is' : 's are'} missing a saved wallet address` : 'Each payer must connect and approve their own USDC transfer', state: 'pending' });
+    } else if (latestAction?.type === 'analyze_spending') {
+      steps.push({ label: 'Spending analysed', detail: `${trip.expenses.length} expenses total $${total.toFixed(2)}`, state: 'done' });
+    } else if (latestAction?.type === 'explain_balance') {
+      steps.push({ label: 'Balances calculated', detail: settlementRows.length ? `${settlementRows.length} payment${settlementRows.length === 1 ? '' : 's'} still needed` : 'Everyone is settled', state: 'done' });
+    } else if (!latestUserMessage) {
+      steps.push({ label: 'Waiting for an instruction', detail: 'Tell the Agent about an expense, a correction, or ask it to prepare settlement.', state: 'pending' });
+    }
+    return steps;
+  };
+
   return <div className="agent-card">
     <div className="agent-head">
       <div className="agent-mark"><Sparkles size={17}/></div>
-      <div className="agent-title"><b>Splitmate Agent</b><small>Shared-money assistant</small></div>
+      <div className="agent-title"><b>Splitmate Agent</b><small>Group money coordinator</small></div>
       <span className="online">● Online</span>
     </div>
+    <section className="agent-mission" aria-label="Agent objective">
+      <span>AGENT OBJECTIVE</span>
+      <b>Get {trip.name} ready to settle.</b>
+      <p>Read the group, prepare the next useful action, and leave every saved change and payment for people to approve.</p>
+    </section>
     <div className="agent-identity">
       <label htmlFor="agent-person">You are</label>
       <select id="agent-person" value={currentPersonId} onChange={(event) => setCurrentPersonId(event.target.value)}>
@@ -254,6 +293,11 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
         : 'See balance'}</b></div>
       <button onClick={() => send('Explain my balance')} disabled={loading || restoring}><Lightbulb size={13}/> Explain</button>
     </div>}
+    <section className="agent-run" aria-label="Agent activity trace">
+      <div className="agent-run-head"><div><span>AGENT RUN {String(runNumber).padStart(2, '0')}</span><b>Evidence trail</b></div><span className={`run-state ${loading || restoring ? 'working' : pendingAction ? 'review' : 'ready'}`}>{loading || restoring ? 'Working' : pendingAction ? 'Review needed' : 'Live'}</span></div>
+      <ol>{runEvidence().map((step, index) => <li key={`${step.label}-${index}`} className={step.state}><i>{step.state === 'done' ? '✓' : index + 1}</i><div><b>{step.label}</b><small>{step.detail}</small></div></li>)}</ol>
+      {settlementRows.length > 0 && <div className="agent-settlement-preview"><span>Current settlement plan</span><b>{settlementRows.map((row) => `${row.from.name} → ${row.to.name}`).join(' · ')}</b></div>}
+    </section>
     <div className="agent-messages" aria-live="polite">
       {messages.map((message, index) => <div key={`${message.role}-${index}`} className={`bubble ${message.role === 'user' ? 'user' : ''}`}>
         <div>{message.text}</div>
@@ -280,13 +324,13 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
       </div>)}
       {(loading || restoring) && <div className="bubble loading-bubble"><Loader2 size={15}/> {restoring ? 'Restoring…' : 'Working…'}</div>}
     </div>
-    <div className="agent-suggestions"><span><MessageCircle size={12}/> Try saying</span>{suggestions.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)} disabled={loading || restoring}>{suggestion}</button>)}</div>
+    <div className="agent-suggestions"><span><MessageCircle size={12}/> Give the Agent an instruction</span>{suggestions.map((suggestion) => <button key={suggestion} onClick={() => send(suggestion)} disabled={loading || restoring}>{suggestion}</button>)}</div>
     <div className="agent-reset">
       <button onClick={reset} disabled={loading || restoring}><RotateCcw size={12}/> Reset conversation</button>
       {lastFailed && <button onClick={() => send(lastFailed)} disabled={loading || restoring}><RefreshCw size={12}/> Retry</button>}
     </div>
     <div className="agent-input">
-      <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} aria-label="Tell Splitmate what happened" placeholder="Tell me what happened…"/>
+      <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} aria-label="Give the Splitmate Agent an instruction" placeholder="Give the Agent an instruction…"/>
       <button onClick={() => send()} disabled={!input.trim() || loading || restoring} aria-label="Send message"><Send size={17}/></button>
     </div>
   </div>;
