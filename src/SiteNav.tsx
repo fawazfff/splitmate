@@ -6,6 +6,7 @@ const links = [
   ['/', 'Home'],
   ['/create', 'Create group'],
   ['/how-it-works', 'How it works'],
+  ['/proof', 'Agent proof'],
   ['/help', 'Help & FAQ'],
   ['/about', 'About'],
 ] as const;
@@ -24,6 +25,6 @@ export default function SiteNav() {
 export function SiteFooter() {
   return <footer>
     <div><b>splitmate</b><span> · Shared expenses, settled simply on Base</span></div>
-    <div><Link to="/how-it-works">How it works</Link> · <Link to="/help">FAQ</Link> · <Link to="/privacy">Privacy</Link> · <Link to="/terms">Terms</Link> · <Link to="/about">About</Link></div>
+    <div><Link to="/how-it-works">How it works</Link> · <Link to="/proof">Agent proof</Link> · <Link to="/help">FAQ</Link> · <Link to="/privacy">Privacy</Link> · <Link to="/terms">Terms</Link> · <Link to="/about">About</Link></div>
   </footer>;
 }
