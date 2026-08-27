@@ -18,6 +18,10 @@ const greeting = (): AgentMessage => ({
   text: "Hey! I'm your Splitmate Agent. Tell me what happened and I'll turn it into an expense, explain your balance, or prepare your settlement.",
 });
 
+const CONFIRMABLE_ACTIONS = new Set<AgentAction['type']>([
+  'add_expense', 'add_expenses', 'update_expense', 'delete_expense', 'add_person',
+]);
+
 export default function Agent({ trip, onTripChanged }: AgentProps) {
   const [messages, setMessages] = useState<AgentMessage[]>([greeting()]);
   const [input, setInput] = useState('');
@@ -75,7 +79,8 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
   const settlementRows = useMemo(() => calculateSettlementRows(trip), [trip]);
   const latestUserMessage = [...messages].reverse().find((message) => message.role === 'user')?.text;
   const latestAction = [...messages].reverse().find((message) => message.role === 'agent' && message.action)?.action || null;
-  const pendingAction = latestAction && 'confirmed' in latestAction && !latestAction.confirmed ? latestAction : null;
+  const pendingAction = latestAction && CONFIRMABLE_ACTIONS.has(latestAction.type)
+    && !('confirmed' in latestAction && latestAction.confirmed) ? latestAction : null;
   const missingWallets = settlementRows.filter((row) => !row.from.wallet || !row.to.wallet).length;
   const runNumber = messages.filter((message) => message.role === 'user').length;
   const currentPerson = balances.find((person) => person.id === currentPersonId);
