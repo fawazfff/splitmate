@@ -6,6 +6,42 @@ import type { Group, Person } from '../types';
 
 const newPerson = (): Person => ({ id: crypto.randomUUID(), name: '' });
 
+async function optimiseProfilePhoto(file: File): Promise<string> {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const next = new Image();
+      next.onload = () => resolve(next);
+      next.onerror = () => reject(new Error('unreadable image'));
+      next.src = sourceUrl;
+    });
+    const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = Math.min(1, 720 / Math.max(longestSide, 1));
+    let width = Math.max(1, Math.round(image.naturalWidth * scale));
+    let height = Math.max(1, Math.round(image.naturalHeight * scale));
+    let quality = 0.84;
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('canvas unavailable');
+      context.fillStyle = '#ffffff';
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      const avatar = canvas.toDataURL('image/jpeg', quality);
+      if (avatar.length <= 750_000 || attempt === 4) return avatar;
+      quality = Math.max(0.58, quality - 0.08);
+      width = Math.max(1, Math.round(width * 0.82));
+      height = Math.max(1, Math.round(height * 0.82));
+    }
+    throw new Error('image could not be optimised');
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
 export default function EnhancedCreate() {
   const navigate = useNavigate();
   const [name, setName] = useState('');
@@ -17,7 +53,7 @@ export default function EnhancedCreate() {
     setPeople((current) => current.map((person) => person.id === id ? { ...person, ...changes } : person));
   };
 
-  const setImage = (id: string, file?: File) => {
+  const setImage = async (id: string, file?: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setError('Choose an image file for the profile picture.');
@@ -27,10 +63,12 @@ export default function EnhancedCreate() {
       setError('Profile pictures must be under 2 MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => updatePerson(id, { avatar: String(reader.result) });
-    reader.onerror = () => setError('That profile picture could not be read.');
-    reader.readAsDataURL(file);
+    setError('');
+    try {
+      updatePerson(id, { avatar: await optimiseProfilePhoto(file) });
+    } catch {
+      setError('That profile picture could not be read. Try a JPG, PNG, or WebP image.');
+    }
   };
 
   const pasteWallet = async (id: string) => {
@@ -96,7 +134,7 @@ export default function EnhancedCreate() {
             {person.avatar ? <img src={person.avatar} alt=""/> : <><Camera size={17}/><small>Photo</small></>}
           </div>
           <span className="camera"><Camera size={11}/></span>
-          <input type="file" accept="image/*" onChange={(event) => setImage(person.id, event.target.files?.[0])}/>
+          <input type="file" accept="image/*" onChange={(event) => { void setImage(person.id, event.target.files?.[0]); }}/>
         </label>
         <div>
           <input required aria-label={`Person ${index + 1} name`} value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={index ? `Friend ${index}` : 'Your name'} maxLength={80}/>
