@@ -45,10 +45,12 @@ function Home() {
       </div>
       <div className="home-live-preview" aria-label="Example of a Splitmate group">
         <div className="preview-bar"><span>LIVE EXAMPLE</span><Link to="/group/demo">View demo</Link></div>
-        <div className="preview-title"><div><b>Abuja Weekend</b><small>4 people · $140.00 shared</small></div><strong>Ready to settle</strong></div>
-        <div className="preview-ledger"><span>Fawaz paid for dinner</span><b>$90.00</b></div>
-        <div className="preview-ledger"><span>Ahmed paid for transport</span><b>$10.00</b></div>
-        <div className="preview-result"><span>Suggested settlement</span><b>2 payments</b></div>
+        <div className="preview-title"><div><b>Abuja Weekend</b><small>4 people</small></div><span>•••</span></div>
+        <p className="preview-total">$140.00</p>
+        <div className="preview-person"><span className="preview-avatar f">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="preview-positive">+$50</strong></div>
+        <div className="preview-person"><span className="preview-avatar a">A</span><div><b>Ahmed</b><small>paid $10</small></div><strong className="preview-positive">+$10</strong></div>
+        <div className="preview-person"><span className="preview-avatar j">J</span><div><b>John</b><small>paid $40</small></div><strong className="preview-negative">-$60</strong></div>
+        <div className="preview-result"><span>Agent found the simplest settlement</span><b>2 payments</b></div>
       </div>
     </section>
     <section className="home-steps" aria-label="How Splitmate works">
