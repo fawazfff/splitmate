@@ -289,7 +289,7 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     </section>
     <div className="agent-identity">
       <label htmlFor="agent-person">You are</label>
-      <select id="agent-person" value={currentPersonId} onChange={(event) => setCurrentPersonId(event.target.value)}>
+      <select id="agent-person" name="agentPerson" autoComplete="off" value={currentPersonId} onChange={(event) => setCurrentPersonId(event.target.value)}>
         {trip.people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}
       </select>
     </div>
@@ -341,7 +341,7 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
       {lastFailed && <button onClick={() => send(lastFailed)} disabled={loading || restoring}><RefreshCw size={12}/> Retry</button>}
     </div>
     <div className="agent-input">
-      <input value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} aria-label="Give the Splitmate Agent an instruction" placeholder="Give the Agent an instruction…"/>
+      <input name="agentInstruction" autoComplete="off" value={input} onChange={(event) => setInput(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && send()} aria-label="Give the Splitmate Agent an instruction" placeholder="Give the Agent an instruction…"/>
       <button onClick={() => send()} disabled={!input.trim() || loading || restoring} aria-label="Send message"><Send size={17}/></button>
     </div>
   </div>;
