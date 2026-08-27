@@ -14,7 +14,7 @@ import { usePersistentGroup } from './usePersistentGroup';
 
 function Avatar({ person, size = 48 }: { person: Person; size?: number }) {
   return <div className="avatar" style={{ width: size, height: size }}>
-    {person.avatar ? <img src={person.avatar} alt=""/> : person.name?.[0]?.toUpperCase() || '?'}
+    {person.avatar ? <img src={person.avatar} alt="" width={size} height={size}/> : person.name?.[0]?.toUpperCase() || '?'}
   </div>;
 }
 
@@ -43,10 +43,10 @@ function Home() {
         <h1>Shared money, made clear.</h1>
         <p>Make a group, record what happened, and see the cleanest way to settle. The Agent suggests changes. Your group confirms them.</p>
         <div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">Open working demo</Link></div>
-        <p className="home-note">No account required. A wallet is only connected by the person making a settlement payment.</p>
+        <div className="home-product-note" aria-label="How Splitmate protects your group"><span>No account required</span><span>Every change is reviewed</span><span>USDC on Base</span></div>
       </div>
       <div className="home-live-preview" aria-label="Example of a Splitmate group">
-        <div className="preview-bar"><span>LIVE EXAMPLE</span><Link to="/group/demo">View demo</Link></div>
+        <div className="preview-bar"><span>ABUJA WEEKEND · LIVE GROUP</span><Link to="/group/demo">Open demo</Link></div>
         <div className="preview-title"><div><b>Abuja Weekend</b><small>4 people</small></div><span>•••</span></div>
         <p className="preview-total">$140.00</p>
         <div className="preview-person"><span className="preview-avatar f">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="preview-positive">+$50</strong></div>
@@ -127,11 +127,11 @@ function ExpenseModal({ group, onAdd, close }: { group: Group; onAdd: (expense: 
   };
   return <div className="backdrop"><div className="modal">
     <button className="icon close" aria-label="Close expense form" onClick={close}><X/></button><p className="eyebrow">ADD EXPENSE</p><h2>What happened?</h2>
-    <label>What was it?<input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Dinner, transport, tickets…" maxLength={120}/></label>
-    <label>Amount<input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="50"/></label>
-    <label>Paid by<select value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>{group.people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
+    <label>What was it?<input name="expenseTitle" autoComplete="off" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Dinner, transport, tickets…" maxLength={120}/></label>
+    <label>Amount<input name="expenseAmount" autoComplete="off" inputMode="decimal" type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="50"/></label>
+    <label>Paid by<select name="expensePayer" value={paidBy} onChange={(event) => setPaidBy(event.target.value)}>{group.people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select></label>
     <p><b>Split between</b></p>
-    {group.people.map((person) => <label className="check" key={person.id}><input type="checkbox" checked={split.includes(person.id)} onChange={(event) => setSplit((current) => event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id))}/>{person.name}</label>)}
+    {group.people.map((person) => <label className="check" key={person.id}><input name={`split-${person.id}`} type="checkbox" checked={split.includes(person.id)} onChange={(event) => setSplit((current) => event.target.checked ? [...current, person.id] : current.filter((id) => id !== person.id))}/>{person.name}</label>)}
     {error && <p className="error" role="alert">{error}</p>}<button className="btn full" onClick={add} disabled={saving}>{saving ? 'Saving…' : 'Add expense'}</button>
   </div></div>;
 }
