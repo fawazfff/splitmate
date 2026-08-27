@@ -209,11 +209,17 @@ export default function Agent({ trip, onTripChanged }: AgentProps) {
     setLoading(true);
     try {
       if (trip.id !== 'demo') {
-        const response = await fetch('/api/conversation', {
+        const requestReset = () => fetch('/api/conversation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'reset', groupId: trip.id, clientId: getClientId() }),
         });
+        let response = await requestReset();
+        // Repair an interrupted first cloud save, then retry the reset once.
+        if (response.status === 404) {
+          await onTripChanged(trip);
+          response = await requestReset();
+        }
         if (!response.ok) throw new Error('Reset failed.');
       }
       setMessages([{ role: 'agent', text: `Conversation reset. I still know this group has ${trip.people.length} people and ${trip.expenses.length} expenses. What happened?` }]);
