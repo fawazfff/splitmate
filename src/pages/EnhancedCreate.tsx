@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Camera, Loader2, Plus, Wallet, X } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ArrowRight, Camera, FlaskConical, Loader2, Plus, ShieldCheck, Wallet, X } from 'lucide-react';
 import { cacheGroup, persistGroup } from '../groupStore';
-import type { Group, Person } from '../types';
+import { getSettlementNetwork } from '../settlement';
+import type { Group, Person, SettlementNetwork } from '../types';
 
 const newPerson = (): Person => ({ id: crypto.randomUUID(), name: '' });
 
@@ -44,6 +45,9 @@ async function optimiseProfilePhoto(file: File): Promise<string> {
 
 export default function EnhancedCreate() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const selectedNetwork: SettlementNetwork = new URLSearchParams(location.search).get('network') === 'base-mainnet' ? 'base-mainnet' : 'base-sepolia';
+  const network = getSettlementNetwork(selectedNetwork);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -103,6 +107,7 @@ export default function EnhancedCreate() {
     const group: Group = {
       id: crypto.randomUUID(),
       name: name.trim(),
+      settlementNetwork: selectedNetwork,
       people: cleanPeople,
       expenses: [],
       settlements: [],
@@ -121,10 +126,14 @@ export default function EnhancedCreate() {
     }
   };
 
-  return <main className="form">
+  return <main id="main-content" className="form">
+    <Link className="ghost compact-link" to="/create"><ArrowLeft size={14}/> Change settlement mode</Link>
     <p className="eyebrow">START A GROUP</p>
     <h1>Create your group.</h1>
     <p>Add your people, profile pictures, and optional wallet addresses. You can edit wallets later from Final Settlement.</p>
+    <div className={`create-network-banner ${network.isTestnet ? 'test' : 'live'}`}>
+      {network.isTestnet ? <FlaskConical size={18}/> : <ShieldCheck size={18}/>}<div><b>{network.isTestnet ? 'Test mode · Base Sepolia' : 'Live mode · Base Mainnet'}</b><small>{network.isTestnet ? 'This group will settle with test USDC. No real money is used.' : 'This group will settle with real USDC after payer approval.'}</small></div>
+    </div>
     <div className="panel">
       <label>Group name<input required name="groupName" autoComplete="off" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. ORION Hackathon Team" maxLength={100}/></label>
       <h3>People</h3>
