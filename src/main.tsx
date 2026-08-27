@@ -8,6 +8,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 import './styles.css';
 import './home-reference.css';
 import './ux-polish.css';
+import './ui-refresh.css';
 import { config } from './wagmi';
 import App from './App';
 
