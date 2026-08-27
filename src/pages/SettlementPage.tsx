@@ -16,7 +16,7 @@ const shortAddress = (value: string) => `${value.slice(0, 8)}…${value.slice(-6
 
 function Avatar({ person, size = 44 }: { person: Person; size?: number }) {
   return <div className="avatar" style={{ width: size, height: size }}>
-    {person.avatar ? <img src={person.avatar} alt=""/> : person.name[0]?.toUpperCase()}
+    {person.avatar ? <img src={person.avatar} alt="" width={size} height={size}/> : person.name[0]?.toUpperCase()}
   </div>;
 }
 
@@ -238,7 +238,7 @@ export default function SettlementPage({ id }: { id: string }) {
       <button className="icon close" aria-label="Close wallet form" onClick={() => setEditing(null)}><X/></button>
       <p className="eyebrow">WALLET SETUP</p><h2>{editing.wallet ? 'Change' : 'Add'} {editing.name}'s wallet</h2>
       <p>Use the Base wallet this person will receive from or approve payments with.</p>
-      <label>Base / EVM wallet address<input autoFocus value={walletInput} onChange={(event) => setWalletInput(event.target.value)} placeholder="0x…" spellCheck={false}/></label>
+      <label>Base / EVM wallet address<input name="walletAddress" autoComplete="off" inputMode="text" value={walletInput} onChange={(event) => setWalletInput(event.target.value)} placeholder="0x…" spellCheck={false}/></label>
       {walletInput && !EVM_ADDRESS.test(walletInput.trim()) && <p className="error">Enter a valid EVM wallet address.</p>}
       <div className="modal-actions"><button className="ghost" onClick={() => setEditing(null)}>Cancel</button><button className="btn" disabled={!EVM_ADDRESS.test(walletInput.trim()) || savingWallet} onClick={saveWallet}>{savingWallet ? 'Saving…' : 'Save wallet'}</button></div>
     </div></div>}
