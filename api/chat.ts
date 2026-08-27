@@ -105,6 +105,18 @@ export default async function handler(req: any, res: any) {
       }
     }
 
+    if (result.action) {
+      const replacesPending = result.action.type === 'add_expense' && result.action.replacesPending === true;
+      const safeAction = sanitizeAction(result.action, trip);
+      result = {
+        ...result,
+        action: safeAction && replacesPending && safeAction.type === 'add_expense'
+          ? { ...safeAction, replacesPending: true }
+          : safeAction,
+      };
+      if (!safeAction) result.message = 'I could not prepare that change safely. Use a positive amount and valid group members.';
+    }
+
     if (conversationId) {
       try {
         await sbJson('agent_messages', [
@@ -318,10 +330,11 @@ function understandExpense(
   };
   const detectAmount = (sources: string[]) => {
     for (const source of sources) {
+      if (/(?:-\s*(?:\$|usd\s*)?\s*\d|(?:\$|usd\s*)-\s*\d)/i.test(source)) continue;
       const matches = [...source.matchAll(/(?:\$|usd\s*)?([0-9]+(?:[.,][0-9]{1,6})?)(?:\s*(?:usd|dollars?|bucks|usdc))?/gi)];
       if (matches.length) {
         const amount = Number(matches[0][1].replace(',', '.'));
-        if (Number.isFinite(amount)) return amount;
+        if (Number.isFinite(amount) && amount > 0 && amount <= 1_000_000) return amount;
       }
     }
     return undefined;
