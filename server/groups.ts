@@ -84,6 +84,9 @@ export function validateGroup(value: unknown): Group {
   if (JSON.stringify(value).length > 6_000_000) throw new Error('This group is too large to save.');
   const group = value as Partial<Group>;
   const name = typeof group.name === 'string' ? group.name.trim().slice(0, 100) : '';
+  // Existing groups were created before a network was stored. Keep them on the
+  // original production network rather than silently turning real groups into test groups.
+  const settlementNetwork = group.settlementNetwork === 'base-sepolia' ? 'base-sepolia' : 'base-mainnet';
   if (!isUuid(group.id) || !name || !Array.isArray(group.people) || !Array.isArray(group.expenses)) {
     throw new Error('Invalid group data.');
   }
@@ -104,6 +107,7 @@ export function validateGroup(value: unknown): Group {
   return {
     id: group.id,
     name,
+    settlementNetwork,
     people: cleanPeople,
     expenses: expenses as Expense[],
     settlements: settlements as SettlementRecord[],
