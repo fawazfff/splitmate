@@ -81,7 +81,9 @@ export default function SettlementPage({ id }: { id: string }) {
   if (loading && !group) return <main className="empty"><Loader2 className="spin"/><p>Loading settlement…</p></main>;
   if (!group) return <main className="empty"><h1>Group not found</h1><p>{syncError || 'This link is not available in this browser.'}</p><Link className="btn" to="/create">Create a group</Link></main>;
 
-  const missingWallets = [...involvedIds].filter((personId) => !group.people.find((person) => person.id === personId)?.wallet).length;
+  const involvedPeople = group.people.filter((person) => involvedIds.has(person.id));
+  const missingWalletPeople = involvedPeople.filter((person) => !person.wallet || !EVM_ADDRESS.test(person.wallet));
+  const readyToSettle = rows.length > 0 && missingWalletPeople.length === 0;
   const expectedPayer = activePayment?.from.wallet?.toLowerCase();
   const connectedWallet = address?.toLowerCase();
   const walletMatches = Boolean(expectedPayer && connectedWallet === expectedPayer);
@@ -111,6 +113,10 @@ export default function SettlementPage({ id }: { id: string }) {
   };
 
   const reviewPayment = (row: SettlementRow) => {
+    if (!readyToSettle) {
+      setPaymentError('Add a valid wallet for everyone involved before reviewing payments.');
+      return;
+    }
     setActivePayment(row);
     setPaymentError('');
     setFeedback('');
@@ -119,6 +125,11 @@ export default function SettlementPage({ id }: { id: string }) {
   };
 
   const sendPayment = async () => {
+    if (!readyToSettle) {
+      setActivePayment(null);
+      setPaymentError('Settlement was locked because a required wallet is missing or invalid.');
+      return;
+    }
     if (!activePayment?.from.wallet || !activePayment.to.wallet) return;
     if (!isConnected || !walletMatches) {
       setPaymentError(`Connect the exact wallet saved for ${activePayment.from.name}.`);
@@ -174,10 +185,16 @@ export default function SettlementPage({ id }: { id: string }) {
     <section className="panel">
       <div className="settlement-summary">
         <div><p className="eyebrow">SETTLEMENT STATUS</p><h2>{rows.length ? `${rows.length} payment${rows.length === 1 ? '' : 's'} needed` : 'Everyone is settled'}</h2></div>
-        {rows.length > 0 && !isDemo && <span className={missingWallets === 0 ? 'success compact' : 'warning'}>{missingWallets === 0 ? 'Payments ready' : `${missingWallets} wallet${missingWallets === 1 ? '' : 's'} needed`}</span>}
+        {rows.length > 0 && !isDemo && <span className={readyToSettle ? 'success compact' : 'warning'}>{readyToSettle ? 'Ready to settle' : `${missingWalletPeople.length} wallet${missingWalletPeople.length === 1 ? '' : 's'} needed`}</span>}
       </div>
+      {rows.length > 0 && !isDemo && <div className={`settlement-readiness ${readyToSettle ? 'ready' : 'blocked'}`} role="status">
+        {readyToSettle ? <Check size={18}/> : <ShieldCheck size={18}/>}
+        <div>
+          <b>{readyToSettle ? 'Ready to settle' : 'Payments are locked'}</b>
+          <small>{readyToSettle ? 'Every person involved has a valid wallet. You can review each payment.' : `Add a valid wallet for ${missingWalletPeople.map((person) => person.name).join(', ')} before any payment can begin.`}</small>
+        </div>
+      </div>}
       {rows.map((row) => {
-        const ready = Boolean(row.from.wallet && row.to.wallet);
         const submitted = submittedFor(row);
         return <div className="payment settlement-row" key={`${row.from.id}-${row.to.id}-${row.amount}`}>
           <div className="payment-route">
@@ -185,9 +202,9 @@ export default function SettlementPage({ id }: { id: string }) {
           </div>
           <div className="payment-amount">
             <b>{money(row.amount)} USDC</b>
-            <small>{isDemo ? 'Preview only' : submitted ? 'Waiting for Base confirmation' : ready ? 'Base mainnet transfer' : 'Wallet setup needed'}</small>
-            {!isDemo && <button className="btn small" disabled={!ready || submitted} onClick={() => reviewPayment(row)}>
-              {submitted ? <><Loader2 className="spin" size={14}/> Submitted</> : <><Wallet size={14}/> Review payment</>}
+            <small>{isDemo ? 'Preview only' : submitted ? 'Waiting for Base confirmation' : readyToSettle ? 'Base mainnet transfer' : 'Waiting for wallet setup'}</small>
+            {!isDemo && <button className="btn small" disabled={!readyToSettle || submitted} onClick={() => reviewPayment(row)}>
+              {submitted ? <><Loader2 className="spin" size={14}/> Submitted</> : !readyToSettle ? <><ShieldCheck size={14}/> Locked</> : <><Wallet size={14}/> Review payment</>}
             </button>}
           </div>
         </div>;
@@ -198,10 +215,13 @@ export default function SettlementPage({ id }: { id: string }) {
     {rows.length > 0 && !isDemo && <section className="panel wallet-panel">
       <p className="eyebrow">PAYMENT WALLETS</p><h2>Saved wallet identities</h2>
       <p>These addresses identify each payer and recipient. Saving an address never gives Splitmate permission to spend from it.</p>
-      {group.people.filter((person) => involvedIds.has(person.id)).map((person) => <button key={person.id} className="person row wallet-person" onClick={() => editWallet(person)}>
-        <Avatar person={person}/><div><b>{person.name}</b><small>{person.wallet ? shortAddress(person.wallet) : 'Wallet not added · Tap to add'}</small></div>
-        {person.wallet ? <Check size={17}/> : <Wallet size={17}/>}
-      </button>)}
+      {involvedPeople.map((person) => {
+        const validWallet = Boolean(person.wallet && EVM_ADDRESS.test(person.wallet));
+        return <button key={person.id} className="person row wallet-person" onClick={() => editWallet(person)}>
+          <Avatar person={person}/><div><b>{person.name}</b><small>{validWallet ? shortAddress(person.wallet || '') : person.wallet ? 'Invalid wallet · Tap to fix' : 'Wallet required to settle · Tap to add'}</small></div>
+          {validWallet ? <Check size={17}/> : <Wallet size={17}/>}
+        </button>;
+      })}
     </section>}
 
     {group.settlements.length > 0 && <section className="panel settlement-history">
