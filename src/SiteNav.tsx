@@ -24,6 +24,6 @@ export default function SiteNav() {
 export function SiteFooter() {
   return <footer>
     <div><b>splitmate</b><span> · Shared expenses, settled simply on Base</span></div>
-    <div><Link to="/how-it-works">How it works</Link> · <Link to="/help">FAQ</Link> · <Link to="/about">About</Link> · <span>ORION Agent Hackathon</span></div>
+    <div><Link to="/how-it-works">How it works</Link> · <Link to="/help">FAQ</Link> · <Link to="/privacy">Privacy</Link> · <Link to="/terms">Terms</Link> · <Link to="/about">About</Link></div>
   </footer>;
 }
