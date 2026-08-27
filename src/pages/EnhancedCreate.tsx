@@ -126,21 +126,21 @@ export default function EnhancedCreate() {
     <h1>Create your group.</h1>
     <p>Add your people, profile pictures, and optional wallet addresses. You can edit wallets later from Final Settlement.</p>
     <div className="panel">
-      <label>Group name<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. ORION Hackathon Team" maxLength={100}/></label>
+      <label>Group name<input required name="groupName" autoComplete="off" value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. ORION Hackathon Team" maxLength={100}/></label>
       <h3>People</h3>
       {people.map((person, index) => <div className="person create-person" key={person.id}>
         <label className="avatar-upload" aria-label={`Add a photo for ${person.name || `person ${index + 1}`}`}>
           <div className="avatar">
-            {person.avatar ? <img src={person.avatar} alt=""/> : <><Camera size={17}/><small>Photo</small></>}
+            {person.avatar ? <img src={person.avatar} alt="" width={48} height={48}/> : <><Camera size={17}/><small>Photo</small></>}
           </div>
           <span className="camera"><Camera size={11}/></span>
-          <input type="file" accept="image/*" onChange={(event) => { void setImage(person.id, event.target.files?.[0]); }}/>
+          <input name={`person-${index + 1}-photo`} type="file" accept="image/*" onChange={(event) => { void setImage(person.id, event.target.files?.[0]); }}/>
         </label>
         <div>
-          <input required aria-label={`Person ${index + 1} name`} value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={index ? `Friend ${index}` : 'Your name'} maxLength={80}/>
+          <input required name={`person-${index + 1}-name`} autoComplete="name" aria-label={`Person ${index + 1} name`} value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={index ? `Friend ${index}` : 'Your name'} maxLength={80}/>
           <div className="wallet-field">
             <Wallet size={14}/>
-            <input aria-label={`${person.name || `Person ${index + 1}`} wallet address, optional`} value={person.wallet || ''} onChange={(event) => updatePerson(person.id, { wallet: event.target.value })} placeholder="Wallet address (optional)" spellCheck={false}/>
+            <input name={`person-${index + 1}-wallet`} autoComplete="off" inputMode="text" aria-label={`${person.name || `Person ${index + 1}`} wallet address, optional`} value={person.wallet || ''} onChange={(event) => updatePerson(person.id, { wallet: event.target.value })} placeholder="Wallet address (optional)" spellCheck={false}/>
             <button type="button" onClick={() => pasteWallet(person.id)}>Paste</button>
           </div>
         </div>
