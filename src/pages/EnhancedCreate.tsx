@@ -23,8 +23,8 @@ export default function EnhancedCreate() {
       setError('Choose an image file for the profile picture.');
       return;
     }
-    if (file.size > 650_000) {
-      setError('Profile pictures must be under 650 KB.');
+    if (file.size > 2_000_000) {
+      setError('Profile pictures must be under 2 MB.');
       return;
     }
     const reader = new FileReader();
