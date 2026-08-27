@@ -95,9 +95,11 @@ export default async function handler(req: any, res: any) {
       const text = data.output_text || extractOutput(data);
       try {
         const parsed = JSON.parse(text);
-        const action = sanitizeAction(parsed.action, trip);
+        const message = typeof parsed.message === 'string' ? parsed.message.slice(0, 1_200) : 'Done.';
+        const redirected = /(?:can(?:not|'t)|unable to) help|keep this focused on shared expenses|outside (?:my|the) scope/i.test(message);
+        const action = redirected ? null : sanitizeAction(parsed.action, trip);
         result = {
-          message: typeof parsed.message === 'string' ? parsed.message.slice(0, 1_200) : 'Done.',
+          message,
           action,
         };
       } catch {
@@ -285,6 +287,43 @@ function understandExpense(
   }
   if (/\b(analy[sz]e|analysis|spending|spent|expense\s+breakdown|where.*money)\b/i.test(latest)) {
     return { message: 'Analyzing your group’s saved expenses.', action: { type: 'analyze_spending' } };
+  }
+  if (/\b(?:send|transfer)\b.*\bto\b/i.test(latest)) {
+    return {
+      message: 'I cannot send money by myself. I can prepare the settlement so the correct payer reviews and approves it in their wallet.',
+      action: { type: 'show_settlement', all: true },
+    };
+  }
+
+  const mentionedExpenseIndex = trip.expenses.findIndex((expense) =>
+    latest.toLowerCase().includes(expense.title.toLowerCase()),
+  );
+  if (/\b(?:delete|remove)\b/i.test(latest) && mentionedExpenseIndex >= 0) {
+    return {
+      message: `I prepared ${trip.expenses[mentionedExpenseIndex].title} for deletion. Review the change before it is saved.`,
+      action: { type: 'delete_expense', expenseIndex: mentionedExpenseIndex },
+    };
+  }
+  const updateAmount = latest.match(/\b(?:change|update|edit)\b.*?\bto\s+\$?([0-9]+(?:[.,][0-9]{1,6})?)/i);
+  if (updateAmount && mentionedExpenseIndex >= 0) {
+    const amount = Number(updateAmount[1].replace(',', '.'));
+    if (Number.isFinite(amount) && amount > 0 && amount <= 1_000_000) {
+      return {
+        message: `I prepared ${trip.expenses[mentionedExpenseIndex].title} to change to $${amount.toFixed(2)}. Review it before saving.`,
+        action: { type: 'update_expense', expenseIndex: mentionedExpenseIndex, amount },
+      };
+    }
+  }
+  const addPerson = latest.match(/\badd\s+([a-z][a-z'-]{1,79})\s+(?:to\s+(?:the\s+)?group|as\s+(?:a\s+)?member)\b/i);
+  if (addPerson) {
+    const candidate = addPerson[1].trim();
+    if (!people.some((person) => person.name.toLowerCase() === candidate.toLowerCase())) {
+      const personName = candidate[0].toUpperCase() + candidate.slice(1);
+      return {
+        message: `I prepared ${personName} to be added to the group. Review the change before it is saved.`,
+        action: { type: 'add_person', name: personName },
+      };
+    }
   }
 
   const draftMatch = lastAssistant.match(/I understood this:\s+(.+?) paid \$([0-9]+(?:\.[0-9]+)?) for (.+?), split between/i);
