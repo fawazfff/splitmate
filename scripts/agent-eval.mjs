@@ -14,6 +14,7 @@ const people = [
 const trip = {
   id: 'demo',
   name: 'Agent Evaluation Group',
+  settlementNetwork: 'base-sepolia',
   people,
   expenses: [{ id: 'demo-dinner', title: 'Dinner', amount: 80, paid: 'demo-fawaz', split: people.map((person) => person.id) }],
   settlements: [],
