@@ -7,6 +7,7 @@ import Agent from './Agent';
 import SiteNav, { SiteFooter } from './SiteNav';
 import AgentProof from './pages/AgentProof';
 import EnhancedCreate from './pages/EnhancedCreate';
+import NetworkChoice from './pages/NetworkChoice';
 import SettlementPage from './pages/SettlementPage';
 import { money } from './settlement';
 import type { Expense, Group, Person } from './types';
@@ -23,7 +24,8 @@ export default function App() {
   const settlementMatch = path.match(/^\/group\/([^/]+)\/settlement\/?$/);
   const groupMatch = path.match(/^\/group\/([^/]+)\/?$/);
   let page: React.ReactNode = <Home/>;
-  if (path === '/create') page = <EnhancedCreate/>;
+  if (path === '/create') page = <NetworkChoice/>;
+  else if (path === '/create/group') page = <EnhancedCreate/>;
   else if (path === '/how-it-works') page = <HowItWorks/>;
   else if (path === '/help') page = <Help/>;
   else if (path === '/about') page = <About/>;
@@ -81,7 +83,7 @@ function GroupPage({ id }: { id: string }) {
 
   return <main id="main-content" className="group-page">
     <div className="trip-head">
-      <div><p className="eyebrow">{isDemo ? 'DEMO GROUP' : 'GROUP'}</p><h1>{group.name}</h1><p>{group.people.length} people · {money(group.expenses.reduce((sum, expense) => sum + expense.amount, 0))} shared</p></div>
+      <div><p className="eyebrow">{isDemo ? 'DEMO GROUP · TEST MODE' : group.settlementNetwork === 'base-sepolia' ? 'TEST GROUP · BASE SEPOLIA' : 'LIVE GROUP · BASE MAINNET'}</p><h1>{group.name}</h1><p>{group.people.length} people · {money(group.expenses.reduce((sum, expense) => sum + expense.amount, 0))} shared</p></div>
       <div className="trip-actions"><Link className="btn" to={`/group/${group.id}/settlement`}><Wallet size={16}/> Final settlement</Link><button className="ghost" onClick={() => setShowExpense(true)}><Plus size={16}/> Add expense</button></div>
     </div>
     {error && <p className="error" role="alert">{error}</p>}
