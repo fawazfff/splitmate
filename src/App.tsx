@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import Agent from './Agent';
 import SiteNav, { SiteFooter } from './SiteNav';
+import AgentProof from './pages/AgentProof';
 import EnhancedCreate from './pages/EnhancedCreate';
 import SettlementPage from './pages/SettlementPage';
 import { money } from './settlement';
@@ -26,6 +27,7 @@ export default function App() {
   else if (path === '/how-it-works') page = <HowItWorks/>;
   else if (path === '/help') page = <Help/>;
   else if (path === '/about') page = <About/>;
+  else if (path === '/proof') page = <AgentProof/>;
   else if (path === '/privacy') page = <Legal title="Privacy"/>;
   else if (path === '/terms') page = <Legal title="Terms of use"/>;
   else if (settlementMatch) page = <SettlementPage key={settlementMatch[1]} id={settlementMatch[1]}/>;
@@ -60,7 +62,7 @@ function Home() {
     </section>
     <section className="home-agent-proof">
       <div><p className="eyebrow">THE SPLITMATE AGENT</p><h2>Say what happened in your own words.</h2><p>“Ahmed paid $60 for transport split with Fawaz and Musa.” Splitmate identifies the payer, the amount, and the people included, then shows the change for review.</p></div>
-      <div className="agent-transcript"><p><span>You</span> Ahmed paid $60 for transport split with Fawaz and Musa.</p><p><span>Splitmate</span> I found a $60.00 transport expense paid by Ahmed, split between Ahmed, Fawaz, and Musa.</p><Link className="text-link" to="/group/demo">Try it in the live demo <ArrowRight size={15}/></Link></div>
+      <div className="agent-transcript"><p><span>You</span> Ahmed paid $60 for transport split with Fawaz and Musa.</p><p><span>Splitmate</span> I found a $60.00 transport expense paid by Ahmed, split between Ahmed, Fawaz, and Musa.</p><Link className="text-link" to="/group/demo">Try it in the live demo <ArrowRight size={15}/></Link><Link className="text-link proof-link" to="/proof">See evaluation proof <ArrowRight size={15}/></Link></div>
     </section>
     <section className="home-closing"><div><p className="eyebrow">READY WHEN THE GROUP IS</p><h2>Stop doing the math.</h2><p>Start a group and keep the focus on the people, not the spreadsheet.</p></div><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
   </main>;
