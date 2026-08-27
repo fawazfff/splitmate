@@ -23,7 +23,7 @@ export default function Help() {
       <p>Everything you need to understand Splitmate and its Agent.</p>
       <div style={{ maxWidth: 820, marginTop: 28, position: 'relative' }}>
         <Search size={17} style={{ position: 'absolute', left: 13, top: 13, color: '#777' }}/>
-        <input aria-label="Search help" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the help center..." style={{ width: '100%', padding: '12px 14px 12px 40px', border: '1px solid #ddd', borderRadius: 12, boxSizing: 'border-box' }}/>
+        <input name="helpSearch" autoComplete="off" aria-label="Search help" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search the help center…" style={{ width: '100%', padding: '12px 14px 12px 40px', border: '1px solid #ddd', borderRadius: 12, boxSizing: 'border-box' }}/>
       </div>
       <div style={{ maxWidth: 820, marginTop: 18 }}>
         {filtered.map(([q, a], i) => (
