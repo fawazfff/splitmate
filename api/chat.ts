@@ -1,4 +1,4 @@
-import { ensureConversation, getOwnedGroupRow, groupFromRow, isUuid } from '../server/groups.js';
+import { ensureConversation, getOwnedGroupRow, groupFromRow, isUuid, recoverLocalGroup } from '../server/groups.js';
 import { consumeAgentRateLimit } from '../server/rateLimit.js';
 import type { AgentAction, Group, Person } from '../src/types.js';
 import { sbJson, supabaseReady } from './supabase.js';
@@ -47,6 +47,7 @@ export default async function handler(req: any, res: any) {
         await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
         row = await getOwnedGroupRow(String(suppliedTrip.id || ''), clientId);
       }
+      if (!row) row = await recoverLocalGroup(suppliedTrip, clientId);
       if (!row) return res.status(404).json({ error: 'Group not found.' });
       trip = groupFromRow(row);
       const conversation = await ensureConversation(trip.id);
