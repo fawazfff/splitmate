@@ -13,6 +13,7 @@ function normalizeGroup(value: Partial<Group>): Group | null {
   return {
     id: value.id,
     name: value.name,
+    settlementNetwork: value.settlementNetwork === 'base-sepolia' ? 'base-sepolia' : 'base-mainnet',
     people: value.people,
     expenses: value.expenses.map((expense) => ({
       ...expense,
