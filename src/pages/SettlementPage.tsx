@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccount, useChainId, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { useAccountModal, useConnectModal } from '@rainbow-me/rainbowkit';
 import { type Address, parseUnits } from 'viem';
-import { ArrowLeft, Check, ExternalLink, Loader2, ShieldCheck, Wallet, X } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, Loader2, QrCode, ShieldCheck, Smartphone, Wallet, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   BASE_CHAIN_ID, BASESCAN_URL, calculateSettlementRows, money,
@@ -29,6 +29,7 @@ export default function SettlementPage({ id }: { id: string }) {
   const [feedback, setFeedback] = useState('');
   const [savingWallet, setSavingWallet] = useState(false);
   const [pendingRecord, setPendingRecord] = useState<SettlementRecord | null>(null);
+  const [phoneHandoff, setPhoneHandoff] = useState(false);
   const handledHashes = useRef(new Set<string>());
 
   const { address, isConnected } = useAccount();
@@ -113,6 +114,7 @@ export default function SettlementPage({ id }: { id: string }) {
     setActivePayment(row);
     setPaymentError('');
     setFeedback('');
+    setPhoneHandoff(false);
     resetWrite();
   };
 
@@ -226,7 +228,15 @@ export default function SettlementPage({ id }: { id: string }) {
       <p className="eyebrow">PAYMENT REVIEW</p><h2>{activePayment.from.name} pays {activePayment.to.name}</h2>
       <div className="review-amount">{money(activePayment.amount)} <small>USDC on Base</small></div>
       <p>Recipient: <b>{shortAddress(activePayment.to.wallet || '')}</b></p>
-      {!isConnected && <button className="btn full" onClick={() => openConnectModal?.()}><Wallet size={16}/> Connect {activePayment.from.name}'s wallet</button>}
+      {!isConnected && <div className="payer-handoff">
+        <div className="payer-handoff-head"><Avatar person={activePayment.from} size={34}/><div><b>{activePayment.from.name} must approve this payment</b><small>Only the wallet saved for {activePayment.from.name} can continue.</small></div></div>
+        <div className="wallet-connect-options">
+          <button className="ghost" onClick={() => openConnectModal?.()}><Wallet size={16}/> Connect on this device</button>
+          <button className="btn" onClick={() => { setPhoneHandoff(true); openConnectModal?.(); }}><Smartphone size={16}/> Use {activePayment.from.name}'s phone</button>
+        </div>
+        <div className="phone-wallet-guide"><QrCode size={17}/><div><b>Phone wallet option</b><small>In the wallet picker, select WalletConnect. A QR code appears on this screen for {activePayment.from.name} to scan with MetaMask, Coinbase Wallet, Trust Wallet, or another phone wallet.</small></div></div>
+        {phoneHandoff && <p className="phone-handoff-status">Wallet picker opened. Select WalletConnect to show the QR code, then wait for {activePayment.from.name} to approve on their phone.</p>}
+      </div>}
       {isConnected && !walletMatches && <div className="wallet-mismatch">
         <b>Wrong wallet connected</b><p>Connected: {address && shortAddress(address)}<br/>Required: {shortAddress(activePayment.from.wallet || '')}</p>
         <button className="ghost" onClick={() => openAccountModal?.()}>Change connected wallet</button>
