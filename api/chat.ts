@@ -72,7 +72,7 @@ export default async function handler(req: any, res: any) {
       }
       const context = {
         currentUser: currentPerson,
-        group: { name: trip.name, people: trip.people, expenses: trip.expenses },
+        group: { name: trip.name, settlementNetwork: trip.settlementNetwork, people: trip.people, expenses: trip.expenses },
         balances: calculateBalances(trip),
       };
       const input = [
