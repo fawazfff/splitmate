@@ -44,13 +44,19 @@ export default function EnhancedCreate() {
 
   const create = async () => {
     setError('');
-    const cleanPeople = people
-      .filter((person) => person.name.trim())
-      .map((person) => ({ ...person, name: person.name.trim(), wallet: person.wallet?.trim() || undefined }));
-    if (!name.trim() || cleanPeople.length < 2) {
-      setError('Add a group name and at least two people.');
+    if (!name.trim()) {
+      setError('Add a group name.');
       return;
     }
+    if (people.length < 2 || people.some((person) => !person.name.trim())) {
+      setError('Add a name for every person in the group.');
+      return;
+    }
+    const cleanPeople = people.map((person) => ({
+      ...person,
+      name: person.name.trim(),
+      wallet: person.wallet?.trim() || undefined,
+    }));
     const invalidWallet = cleanPeople.find((person) => person.wallet && !/^0x[a-fA-F0-9]{40}$/.test(person.wallet));
     if (invalidWallet) {
       setError(`${invalidWallet.name}'s wallet address is not a valid EVM address.`);
@@ -82,7 +88,7 @@ export default function EnhancedCreate() {
     <h1>Create your group.</h1>
     <p>Add your people, profile pictures, and optional wallet addresses. You can edit wallets later from Final Settlement.</p>
     <div className="panel">
-      <label>Group name<input value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. ORION Hackathon Team" maxLength={100}/></label>
+      <label>Group name<input required value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. ORION Hackathon Team" maxLength={100}/></label>
       <h3>People</h3>
       {people.map((person, index) => <div className="person create-person" key={person.id}>
         <label className="avatar-upload" aria-label={`Add a photo for ${person.name || `person ${index + 1}`}`}>
@@ -93,10 +99,10 @@ export default function EnhancedCreate() {
           <input type="file" accept="image/*" onChange={(event) => setImage(person.id, event.target.files?.[0])}/>
         </label>
         <div>
-          <input value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={index ? `Friend ${index}` : 'Your name'} maxLength={80}/>
+          <input required aria-label={`Person ${index + 1} name`} value={person.name} onChange={(event) => updatePerson(person.id, { name: event.target.value })} placeholder={index ? `Friend ${index}` : 'Your name'} maxLength={80}/>
           <div className="wallet-field">
             <Wallet size={14}/>
-            <input value={person.wallet || ''} onChange={(event) => updatePerson(person.id, { wallet: event.target.value })} placeholder="Wallet address (optional)" spellCheck={false}/>
+            <input aria-label={`${person.name || `Person ${index + 1}`} wallet address, optional`} value={person.wallet || ''} onChange={(event) => updatePerson(person.id, { wallet: event.target.value })} placeholder="Wallet address (optional)" spellCheck={false}/>
             <button type="button" onClick={() => pasteWallet(person.id)}>Paste</button>
           </div>
         </div>
