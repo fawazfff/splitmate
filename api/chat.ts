@@ -30,11 +30,6 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ error: 'Message and a valid group are required.' });
     }
 
-    if (!(await consumeAgentRateLimit(req, clientId))) {
-      res.setHeader('Retry-After', '60');
-      return res.status(429).json({ error: 'The Agent is receiving too many messages. Try again in one minute.' });
-    }
-
     const isDemo = suppliedTrip.id === 'demo';
     let trip: Group;
     let conversationId: string | null = null;
@@ -68,6 +63,12 @@ export default async function handler(req: any, res: any) {
     let result = understandExpense(message, history, trip, currentPerson);
 
     if (!result) {
+      // Deterministic, validated actions do not incur model cost. Apply the
+      // distributed limiter at the model boundary, where abuse creates cost.
+      if (!(await consumeAgentRateLimit(req, clientId))) {
+        res.setHeader('Retry-After', '60');
+        return res.status(429).json({ error: 'The Agent is receiving too many messages. Try again in one minute.' });
+      }
       const context = {
         currentUser: currentPerson,
         group: { name: trip.name, people: trip.people, expenses: trip.expenses },
