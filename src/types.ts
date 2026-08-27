@@ -15,6 +15,8 @@ export type Expense = {
 
 export type SettlementStatus = 'submitted' | 'confirmed' | 'failed';
 
+export type SettlementNetwork = 'base-mainnet' | 'base-sepolia';
+
 export type SettlementRecord = {
   id: string;
   from: string;
@@ -30,6 +32,7 @@ export type SettlementRecord = {
 export type Group = {
   id: string;
   name: string;
+  settlementNetwork: SettlementNetwork;
   people: Person[];
   expenses: Expense[];
   settlements: SettlementRecord[];
