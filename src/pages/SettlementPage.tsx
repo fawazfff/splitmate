@@ -2,11 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAccount, useChainId, useSwitchChain, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { useAccountModal, useConnectModal } from '@rainbow-me/rainbowkit';
 import { type Address, parseUnits } from 'viem';
-import { ArrowLeft, Check, ExternalLink, Loader2, QrCode, ShieldCheck, Smartphone, Wallet, X } from 'lucide-react';
+import { ArrowLeft, Check, ExternalLink, FlaskConical, Loader2, QrCode, ShieldCheck, Smartphone, Wallet, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
-  BASE_CHAIN_ID, BASESCAN_URL, calculateSettlementRows, money,
-  USDC_ABI, USDC_ADDRESS, USDC_DECIMALS,
+  calculateSettlementRows, getSettlementNetwork, money, USDC_ABI, USDC_DECIMALS,
 } from '../settlement';
 import type { Group, Person, SettlementRecord, SettlementRow } from '../types';
 import { usePersistentGroup } from '../usePersistentGroup';
@@ -38,6 +37,7 @@ export default function SettlementPage({ id }: { id: string }) {
   const { openAccountModal } = useAccountModal();
   const { switchChainAsync, isPending: switchingChain } = useSwitchChain();
   const { writeContractAsync, isPending: walletPending, reset: resetWrite } = useWriteContract();
+  const network = getSettlementNetwork(group?.settlementNetwork);
 
   const rows = useMemo(() => group ? calculateSettlementRows(group) : [], [group]);
   const involvedIds = useMemo(() => new Set(rows.flatMap((row) => [row.from.id, row.to.id])), [rows]);
@@ -138,13 +138,13 @@ export default function SettlementPage({ id }: { id: string }) {
     setPaymentError('');
     let txHash: `0x${string}`;
     try {
-      if (chainId !== BASE_CHAIN_ID) await switchChainAsync({ chainId: BASE_CHAIN_ID });
+      if (chainId !== network.chainId) await switchChainAsync({ chainId: network.chainId });
       txHash = await writeContractAsync({
-        address: USDC_ADDRESS,
+        address: network.usdcAddress as Address,
         abi: USDC_ABI,
         functionName: 'transfer',
         args: [activePayment.to.wallet as Address, parseUnits(activePayment.amount.toFixed(USDC_DECIMALS), USDC_DECIMALS)],
-        chainId: BASE_CHAIN_ID,
+        chainId: network.chainId,
       });
     } catch (reason) {
       setPaymentError(reason instanceof Error ? reason.message : 'The wallet did not submit the payment.');
@@ -177,7 +177,10 @@ export default function SettlementPage({ id }: { id: string }) {
     <Link className="ghost" to={`/group/${id}`}><ArrowLeft size={15}/> Back to group</Link>
     <p className="eyebrow settlement-eyebrow">FINAL SETTLEMENT</p>
     <h1>Settle {group.name}.</h1>
-    <p>Review each payment, then connect the exact wallet saved for the person paying. Every USDC transfer requires approval in that wallet.</p>
+    <p>Review each payment, then connect the exact wallet saved for the person paying. Every {network.paymentLabel} transfer requires approval in that wallet.</p>
+    <div className={`settlement-network-banner ${network.isTestnet ? 'test' : 'live'}`}>
+      {network.isTestnet ? <FlaskConical size={18}/> : <ShieldCheck size={18}/>}<div><b>{network.isTestnet ? 'Test mode · Base Sepolia' : 'Live mode · Base Mainnet'}</b><small>{network.isTestnet ? 'Payments use test USDC only. Test tokens have no real-world value.' : 'Payments transfer real USDC only after the payer approves in their wallet.'}</small></div>
+    </div>
     {isDemo && <div className="demo-notice"><ShieldCheck size={18}/><div><b>Safe demo preview</b><small>This shows the settlement plan only. Demo payments and wallet edits are disabled.</small></div></div>}
     {(syncError || paymentError) && <p className="error" role="alert">{paymentError || syncError}</p>}
     {feedback && <p className="success notice" role="status"><Check size={16}/>{feedback}</p>}
@@ -202,7 +205,7 @@ export default function SettlementPage({ id }: { id: string }) {
           </div>
           <div className="payment-amount">
             <b>{money(row.amount)} USDC</b>
-            <small>{isDemo ? 'Preview only' : submitted ? 'Waiting for Base confirmation' : readyToSettle ? 'Base mainnet transfer' : 'Waiting for wallet setup'}</small>
+            <small>{isDemo ? 'Preview only' : submitted ? `Waiting for ${network.label} confirmation` : readyToSettle ? `${network.label} transfer` : 'Waiting for wallet setup'}</small>
             {!isDemo && <button className="btn small" disabled={!readyToSettle || submitted} onClick={() => reviewPayment(row)}>
               {submitted ? <><Loader2 className="spin" size={14}/> Submitted</> : !readyToSettle ? <><ShieldCheck size={14}/> Locked</> : <><Wallet size={14}/> Review payment</>}
             </button>}
@@ -214,7 +217,7 @@ export default function SettlementPage({ id }: { id: string }) {
 
     {rows.length > 0 && !isDemo && <section className="panel wallet-panel">
       <p className="eyebrow">PAYMENT WALLETS</p><h2>Saved wallet identities</h2>
-      <p>These addresses identify each payer and recipient. Saving an address never gives Splitmate permission to spend from it.</p>
+      <p>These addresses identify each payer and recipient. They must be able to use {network.label}. Saving an address never gives Splitmate permission to spend from it.</p>
       {involvedPeople.map((person) => {
         const validWallet = Boolean(person.wallet && EVM_ADDRESS.test(person.wallet));
         return <button key={person.id} className="person row wallet-person" onClick={() => editWallet(person)}>
@@ -225,10 +228,10 @@ export default function SettlementPage({ id }: { id: string }) {
     </section>}
 
     {group.settlements.length > 0 && <section className="panel settlement-history">
-      <p className="eyebrow">PAYMENT HISTORY</p><h2>Base transactions</h2>
+      <p className="eyebrow">PAYMENT HISTORY</p><h2>{network.label} transactions</h2>
       {[...group.settlements].reverse().map((record) => <div className="payment" key={record.id}>
         <div><b>{group.people.find((person) => person.id === record.from)?.name} → {group.people.find((person) => person.id === record.to)?.name}</b><small>{money(record.amount)} USDC · {record.status}</small></div>
-        <a className="ghost compact-link" href={`${BASESCAN_URL}/tx/${record.txHash}`} target="_blank" rel="noreferrer">BaseScan <ExternalLink size={13}/></a>
+        <a className="ghost compact-link" href={`${network.explorerUrl}/tx/${record.txHash}`} target="_blank" rel="noreferrer">{network.isTestnet ? 'Sepolia BaseScan' : 'BaseScan'} <ExternalLink size={13}/></a>
       </div>)}
     </section>}
 
@@ -246,7 +249,7 @@ export default function SettlementPage({ id }: { id: string }) {
     {activePayment && <div className="backdrop"><div className="modal payment-review">
       <button className="icon close" aria-label="Close payment review" onClick={() => setActivePayment(null)}><X/></button>
       <p className="eyebrow">PAYMENT REVIEW</p><h2>{activePayment.from.name} pays {activePayment.to.name}</h2>
-      <div className="review-amount">{money(activePayment.amount)} <small>USDC on Base</small></div>
+      <div className="review-amount">{money(activePayment.amount)} <small>{network.paymentLabel} on {network.label}</small></div>
       <p>Recipient: <b>{shortAddress(activePayment.to.wallet || '')}</b></p>
       {!isConnected && <div className="payer-handoff">
         <div className="payer-handoff-head"><Avatar person={activePayment.from} size={34}/><div><b>{activePayment.from.name} must approve this payment</b><small>Only the wallet saved for {activePayment.from.name} can continue.</small></div></div>
@@ -261,9 +264,9 @@ export default function SettlementPage({ id }: { id: string }) {
         <b>Wrong wallet connected</b><p>Connected: {address && shortAddress(address)}<br/>Required: {shortAddress(activePayment.from.wallet || '')}</p>
         <button className="ghost" onClick={() => openAccountModal?.()}>Change connected wallet</button>
       </div>}
-      {isConnected && walletMatches && chainId !== BASE_CHAIN_ID && <button className="btn full" disabled={switchingChain} onClick={() => switchChainAsync({ chainId: BASE_CHAIN_ID })}>{switchingChain ? 'Switching…' : 'Switch to Base mainnet'}</button>}
-      {isConnected && walletMatches && chainId === BASE_CHAIN_ID && <button className="btn full" disabled={walletPending} onClick={sendPayment}>
-        {walletPending ? <><Loader2 className="spin" size={16}/> Check your wallet…</> : <><ShieldCheck size={16}/> Approve USDC transfer</>}
+      {isConnected && walletMatches && chainId !== network.chainId && <button className="btn full" disabled={switchingChain} onClick={() => switchChainAsync({ chainId: network.chainId })}>{switchingChain ? 'Switching…' : `Switch to ${network.label}`}</button>}
+      {isConnected && walletMatches && chainId === network.chainId && <button className="btn full" disabled={walletPending} onClick={sendPayment}>
+        {walletPending ? <><Loader2 className="spin" size={16}/> Check your wallet…</> : <><ShieldCheck size={16}/> Approve {network.paymentLabel} transfer</>}
       </button>}
       <small className="approval-note">Splitmate cannot move funds by itself. The connected payer must approve this exact transfer in their wallet.</small>
     </div></div>}
