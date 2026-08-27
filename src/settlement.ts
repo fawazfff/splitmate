@@ -1,9 +1,36 @@
-import type { Group, Person, SettlementRow } from './types';
+import type { Group, Person, SettlementNetwork, SettlementRow } from './types';
 
-export const BASE_CHAIN_ID = 8453;
-export const USDC_ADDRESS = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as const;
 export const USDC_DECIMALS = 6;
-export const BASESCAN_URL = 'https://basescan.org';
+
+export const SETTLEMENT_NETWORKS = {
+  'base-mainnet': {
+    id: 'base-mainnet',
+    chainId: 8453,
+    usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    explorerUrl: 'https://basescan.org',
+    label: 'Base Mainnet',
+    paymentLabel: 'real USDC',
+    isTestnet: false,
+  },
+  'base-sepolia': {
+    id: 'base-sepolia',
+    chainId: 84532,
+    usdcAddress: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    explorerUrl: 'https://sepolia.basescan.org',
+    label: 'Base Sepolia',
+    paymentLabel: 'test USDC',
+    isTestnet: true,
+  },
+} as const;
+
+export function getSettlementNetwork(network?: SettlementNetwork) {
+  return SETTLEMENT_NETWORKS[network === 'base-sepolia' ? 'base-sepolia' : 'base-mainnet'];
+}
+
+// Kept for existing receipt/proof links. New payments always use the group's selected network.
+export const BASE_CHAIN_ID = SETTLEMENT_NETWORKS['base-mainnet'].chainId;
+export const USDC_ADDRESS = SETTLEMENT_NETWORKS['base-mainnet'].usdcAddress;
+export const BASESCAN_URL = SETTLEMENT_NETWORKS['base-mainnet'].explorerUrl;
 
 export const USDC_ABI = [
   {
@@ -82,6 +109,7 @@ export function getDemoGroup(): Group {
   return {
     id: 'demo',
     name: 'ORION Demo',
+    settlementNetwork: 'base-sepolia',
     people: [
       { id: 'demo-fawaz', name: 'Fawaz' },
       { id: 'demo-ahmed', name: 'Ahmed' },
