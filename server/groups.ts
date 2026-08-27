@@ -4,6 +4,7 @@ import type { Expense, Group, Person, SettlementRecord } from '../src/types.js';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const EVM_ADDRESS = /^0x[a-fA-F0-9]{40}$/;
 const TX_HASH = /^0x[a-fA-F0-9]{64}$/;
+const MAX_AVATAR_DATA_URL_LENGTH = 2_800_000;
 
 export function isUuid(value: unknown): value is string {
   return typeof value === 'string' && UUID.test(value);
@@ -17,7 +18,7 @@ function cleanPerson(value: unknown): Person | null {
   const wallet = typeof person.wallet === 'string' ? person.wallet.trim() : '';
   if (wallet && !EVM_ADDRESS.test(wallet)) return null;
   const avatar = typeof person.avatar === 'string' ? person.avatar : '';
-  if (avatar && (!avatar.startsWith('data:image/') || avatar.length > 900_000)) return null;
+  if (avatar && (!avatar.startsWith('data:image/') || avatar.length > MAX_AVATAR_DATA_URL_LENGTH)) return null;
   return { id: person.id, name, wallet: wallet || undefined, avatar: avatar || undefined };
 }
 
@@ -80,7 +81,7 @@ function cleanSettlement(value: unknown, memberIds: Set<string>): SettlementReco
 
 export function validateGroup(value: unknown): Group {
   if (!value || typeof value !== 'object') throw new Error('Invalid group data.');
-  if (JSON.stringify(value).length > 2_800_000) throw new Error('This group is too large to save.');
+  if (JSON.stringify(value).length > 6_000_000) throw new Error('This group is too large to save.');
   const group = value as Partial<Group>;
   const name = typeof group.name === 'string' ? group.name.trim().slice(0, 100) : '';
   if (!isUuid(group.id) || !name || !Array.isArray(group.people) || !Array.isArray(group.expenses)) {
@@ -121,6 +122,30 @@ export async function getOwnedGroupRow(groupId: string, clientId: string) {
     'GET',
   );
   return Array.isArray(rows) ? rows[0] : undefined;
+}
+
+// A group is cached locally before the first cloud write completes. If that
+// initial write was interrupted, an Agent request can safely repair the record
+// only when no other browser owns this group ID.
+export async function recoverLocalGroup(groupInput: unknown, clientId: string) {
+  const group = validateGroup(groupInput);
+  if (!isUuid(clientId)) return undefined;
+  const existing = await sbJson(
+    `groups?id=eq.${encodeURIComponent(group.id)}&select=id,client_id&limit=1`,
+    undefined,
+    'GET',
+  );
+  if (existing?.[0]?.client_id && existing[0].client_id !== clientId) return undefined;
+  if (!existing?.[0]) {
+    const now = new Date().toISOString();
+    await sbJson(
+      'groups?on_conflict=id',
+      { id: group.id, name: group.name, client_id: clientId, state: group, updated_at: now },
+      'POST',
+      { Prefer: 'resolution=ignore-duplicates,return=minimal' },
+    );
+  }
+  return getOwnedGroupRow(group.id, clientId);
 }
 
 export async function ensureConversation(groupId: string) {
