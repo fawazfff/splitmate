@@ -85,6 +85,8 @@ for (let index = 0; index < cases.length; index += concurrency) {
 }
 
 const passed = results.filter((result) => result.passed).length;
+const sortedLatencies = results.map((result) => result.latencyMs).sort((a, b) => a - b);
+const percentile = (value) => sortedLatencies[Math.min(sortedLatencies.length - 1, Math.ceil(sortedLatencies.length * value) - 1)];
 const grouped = Object.groupBy(results, (result) => result.category);
 console.log(`\nSplitmate Agent evaluation`);
 console.log(`Target: ${target}`);
@@ -102,5 +104,5 @@ for (const [category, categoryResults] of Object.entries(grouped)) {
   console.log(`${category}: ${categoryPassed}/${categoryResults.length}`);
 }
 
-console.log(`\nMachine summary: ${JSON.stringify({ target, passed, total: results.length, passRate: Number(((passed / results.length) * 100).toFixed(1)), averageLatencyMs: Math.round(results.reduce((sum, result) => sum + result.latencyMs, 0) / results.length) })}`);
+console.log(`\nMachine summary: ${JSON.stringify({ target, passed, total: results.length, passRate: Number(((passed / results.length) * 100).toFixed(1)), averageLatencyMs: Math.round(results.reduce((sum, result) => sum + result.latencyMs, 0) / results.length), p50LatencyMs: percentile(0.5), p95LatencyMs: percentile(0.95) })}`);
 process.exitCode = passed === results.length ? 0 : 1;
