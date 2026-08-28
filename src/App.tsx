@@ -74,32 +74,32 @@ function Home() {
   return <main id="main-content" className="home-page home-editorial">
     <section className="home-intro">
       <div className="home-intro-copy">
-        <p className="eyebrow">SPLITMATE / SHARED EXPENSES</p>
+        <p className="eyebrow">FOR FRIENDS, ROOMMATES, TRIPS AND TEAMS</p>
         <h1>Shared money, made clear.</h1>
-        <p>Make a group, record what happened, and see the cleanest way to settle. The Agent suggests changes. Your group confirms them.</p>
+        <p>The receipts, transfers, and “I paid for this” messages usually live in a group chat. Splitmate turns them into one clear shared record. The Agent prepares the change. Your group confirms it.</p>
         <div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">Open working demo</Link></div>
-        <div className="home-product-note" aria-label="How Splitmate protects your group"><span>No account required</span><span>Every change is reviewed</span><span>USDC on Base</span></div>
+        <div className="home-product-note" aria-label="How Splitmate protects your group"><span>No account required</span><span>Test before you settle</span><span>Live USDC when ready</span></div>
       </div>
       <div className="home-live-preview" aria-label="Example of a Splitmate group">
-        <div className="preview-bar"><span>ABUJA WEEKEND · LIVE GROUP</span><Link to="/group/demo">Open demo</Link></div>
-        <div className="preview-title"><div><b>Abuja Weekend</b><small>4 people</small></div><span>•••</span></div>
+        <div className="preview-bar"><span>ABUJA WEEKEND · TEST GROUP</span><Link to="/group/demo">Open demo</Link></div>
+        <div className="preview-title"><div><b>Abuja Weekend</b><small>Hotel · transport · late-night food</small></div><span>•••</span></div>
         <p className="preview-total">$140.00</p>
         <div className="preview-person"><span className="preview-avatar f">F</span><div><b>Fawaz</b><small>paid $90</small></div><strong className="preview-positive">+$50</strong></div>
         <div className="preview-person"><span className="preview-avatar a">A</span><div><b>Ahmed</b><small>paid $10</small></div><strong className="preview-positive">+$10</strong></div>
         <div className="preview-person"><span className="preview-avatar j">J</span><div><b>John</b><small>paid $40</small></div><strong className="preview-negative">-$60</strong></div>
-        <div className="preview-result"><span>Agent found the simplest settlement</span><b>2 payments</b></div>
+        <div className="preview-result"><span>Agent reduced the group to two payments</span><b>Ready to review</b></div>
       </div>
     </section>
-    <section className="home-steps" aria-label="How Splitmate works">
-      <article><span>01</span><h2>Capture expenses</h2><p>Add an expense yourself or say it naturally to the Agent.</p></article>
-      <article><span>02</span><h2>Review the split</h2><p>Every Agent change waits for confirmation before it affects your group.</p></article>
-      <article><span>03</span><h2>Settle with clarity</h2><p>See who pays whom. Payments use native USDC on Base only after wallet approval.</p></article>
+    <section className="home-steps" aria-label="From group chat to clear settlement">
+      <article><span>01</span><h2>Start with what happened.</h2><p>“Fawaz paid $50 for dinner.” That is enough to begin.</p></article>
+      <article><span>02</span><h2>Review the Agent’s read.</h2><p>It identifies the payer, people involved, and what needs approval.</p></article>
+      <article><span>03</span><h2>Settle when everyone agrees.</h2><p>One clean plan replaces a chain of “send me your share” messages.</p></article>
     </section>
     <section className="home-agent-proof">
-      <div><p className="eyebrow">THE SPLITMATE AGENT</p><h2>Say what happened in your own words.</h2><p>“Ahmed paid $60 for transport split with Fawaz and Musa.” Splitmate identifies the payer, the amount, and the people included, then shows the change for review.</p></div>
-      <div className="agent-transcript"><p><span>You</span> Ahmed paid $60 for transport split with Fawaz and Musa.</p><p><span>Splitmate</span> I found a $60.00 transport expense paid by Ahmed, split between Ahmed, Fawaz, and Musa.</p><Link className="text-link" to="/group/demo">Try it in the live demo <ArrowRight size={15}/></Link><Link className="text-link proof-link" to="/proof">See evaluation proof <ArrowRight size={15}/></Link></div>
+      <div><p className="eyebrow">ONE MESSAGE. A REAL ACTION.</p><h2>The Agent reads the details people actually send.</h2><p>“Ahmed paid $60 for transport split with Fawaz and Musa.” Splitmate turns that into a reviewable group action. It never quietly changes the ledger.</p></div>
+      <div className="agent-transcript"><p><span>You</span> Ahmed paid $60 for transport split with Fawaz and Musa.</p><p><span>Splitmate</span> I found a $60.00 transport expense. Ahmed paid; Ahmed, Fawaz, and Musa are included.</p><p className="agent-review-row"><span>Ready to review</span><b>Transport · $60.00 · Ahmed, Fawaz, Musa</b></p><Link className="text-link" to="/group/demo">Try that in the working demo <ArrowRight size={15}/></Link><Link className="text-link proof-link" to="/proof">See how the Agent proves each action</Link></div>
     </section>
-    <section className="home-closing"><div><p className="eyebrow">READY WHEN THE GROUP IS</p><h2>Stop doing the math.</h2><p>Start a group and keep the focus on the people, not the spreadsheet.</p></div><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
+    <section className="home-closing"><div><p className="eyebrow">BUILT FOR REAL GROUPS</p><h2>Stop doing the math.</h2><p>Start with what happened. Let the group approve the rest. There is no account wall and no payment until you choose to settle.</p></div><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link></section>
   </main>;
 }
 
