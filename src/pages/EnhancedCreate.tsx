@@ -117,7 +117,7 @@ export default function EnhancedCreate() {
       // A new group is immediately usable in this browser. Do not trap the user
       // on this form while a cold serverless/database request is waking up.
       cacheGroup(group);
-      navigate(`/group/${group.id}`);
+      navigate(`/group/${group.id}?created=1`);
       void persistGroup(group).catch((reason) => {
         console.warn('Splitmate could not immediately sync the new group.', reason);
       });

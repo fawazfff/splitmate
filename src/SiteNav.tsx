@@ -17,8 +17,8 @@ export default function SiteNav() {
     <Link className="brand" to="/" onClick={() => setOpen(false)}>split<span>mate</span></Link>
     <nav aria-label="Primary navigation">{links.slice(0, 1).concat(links.slice(2)).map(([to, label]) => <NavLink key={to} to={to} className={({ isActive }) => isActive ? 'is-active' : undefined}>{label}</NavLink>)}</nav>
     <Link className="btn small" to="/create">Start a group <ArrowRight size={14}/></Link>
-    <button className="icon mobile-menu" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen((current) => !current)}>{open ? <X size={19}/> : <Menu size={19}/>}</button>
-    {open && <nav className="mobile-nav" aria-label="Mobile navigation">{links.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? 'is-active' : undefined}>{label}</NavLink>)}</nav>}
+    <button type="button" className="icon mobile-menu" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="mobile-navigation" onClick={() => setOpen((current) => !current)}>{open ? <X size={19}/> : <Menu size={19}/>}</button>
+    {open && <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">{links.map(([to, label]) => <NavLink key={to} to={to} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? 'is-active' : undefined}>{label}</NavLink>)}</nav>}
   </header>;
 }
 

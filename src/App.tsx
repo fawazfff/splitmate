@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   ArrowRight, Camera, Copy, Plus, Wallet, X,
@@ -20,9 +20,12 @@ function Avatar({ person, size = 48 }: { person: Person; size?: number }) {
 }
 
 export default function App() {
-  const path = useLocation().pathname;
+  const location = useLocation();
+  const path = location.pathname;
   const settlementMatch = path.match(/^\/group\/([^/]+)\/settlement\/?$/);
   const groupMatch = path.match(/^\/group\/([^/]+)\/?$/);
+  const created = new URLSearchParams(location.search).get('created') === '1';
+  usePageMeta(path);
   let page: React.ReactNode = <Home/>;
   if (path === '/create') page = <NetworkChoice/>;
   else if (path === '/create/group') page = <EnhancedCreate/>;
@@ -33,8 +36,38 @@ export default function App() {
   else if (path === '/privacy') page = <Legal title="Privacy"/>;
   else if (path === '/terms') page = <Legal title="Terms of use"/>;
   else if (settlementMatch) page = <SettlementPage key={settlementMatch[1]} id={settlementMatch[1]}/>;
-  else if (groupMatch) page = <GroupPage key={groupMatch[1]} id={groupMatch[1]}/>;
+  else if (groupMatch) page = <GroupPage key={groupMatch[1]} id={groupMatch[1]} created={created}/>;
+  else if (path !== '/') page = <NotFound/>;
   return <><a className="skip-link" href="#main-content">Skip to content</a><SiteNav/>{page}<SiteFooter/></>;
+}
+
+const pageDetails: Array<[RegExp, string, string]> = [
+  [/^\/$/, 'Splitmate · Shared money, made clear', 'An approval-first AI agent for shared expenses and USDC settlement on Base.'],
+  [/^\/create/, 'Create a group · Splitmate', 'Choose test or live mode, then create a shared-expense group with Splitmate.'],
+  [/^\/how-it-works$/, 'How Splitmate works', 'See how Splitmate turns group expenses into safe, human-approved settlement actions.'],
+  [/^\/proof$/, 'Agent proof · Splitmate', 'Review Splitmate’s production agent evaluation, approval gates, and settlement verification.'],
+  [/^\/help$/, 'Help & FAQ · Splitmate', 'Answers about Splitmate groups, the Agent, wallets, and Base settlement.'],
+  [/^\/about$/, 'About Splitmate', 'Learn about Splitmate, the approval-first AI agent for shared money.'],
+  [/^\/privacy$/, 'Privacy · Splitmate', 'How Splitmate handles group data, wallets, and onchain payments.'],
+  [/^\/terms$/, 'Terms of use · Splitmate', 'Terms for using Splitmate shared-expense and settlement tools.'],
+  [/^\/group\/[^/]+\/settlement\/?$/, 'Final settlement · Splitmate', 'Review your group’s payment plan and settle with verified USDC transfers on Base.'],
+  [/^\/group\/[^/]+\/?$/, 'Group expenses · Splitmate', 'Record shared expenses, work with the Agent, and prepare your group’s settlement.'],
+];
+
+function usePageMeta(path: string) {
+  useEffect(() => {
+    const [, title, description] = pageDetails.find(([pattern]) => pattern.test(path)) || ['/', 'Page not found · Splitmate', 'This Splitmate page is not available.'];
+    document.title = title;
+    const setMeta = (selector: string, value: string) => {
+      const element = document.head.querySelector(selector) as HTMLMetaElement | null;
+      if (element) element.content = value;
+    };
+    setMeta('meta[name="description"]', description);
+    setMeta('meta[property="og:title"]', title);
+    setMeta('meta[property="og:description"]', description);
+    setMeta('meta[name="twitter:title"]', title);
+    setMeta('meta[name="twitter:description"]', description);
+  }, [path]);
 }
 
 function Home() {
@@ -70,15 +103,17 @@ function Home() {
   </main>;
 }
 
-function GroupPage({ id }: { id: string }) {
+function GroupPage({ id, created }: { id: string; created: boolean }) {
   const { group, loading, error, updateGroup, isDemo } = usePersistentGroup(id);
   const [showExpense, setShowExpense] = useState(false);
+  const [notice, setNotice] = useState(created ? 'Group created. Add an expense yourself or tell the Agent what happened.' : '');
   if (loading && !group) return <main id="main-content" className="loading-page" aria-busy="true"><p className="eyebrow">OPENING GROUP</p><div className="skeleton skeleton-title"/><div className="skeleton skeleton-line"/><div className="skeleton skeleton-panel"/></main>;
   if (!group) return <main className="empty"><h1>Group not found</h1><p>{error || 'This group is not available in this browser.'}</p><Link className="btn" to="/create">Create a group</Link></main>;
 
   const addExpense = async (expense: Expense) => {
     await updateGroup({ ...group, expenses: [...group.expenses, expense] });
     setShowExpense(false);
+    setNotice(`${expense.title} was added to ${group.name}.`);
   };
 
   return <main id="main-content" className="group-page">
@@ -87,6 +122,7 @@ function GroupPage({ id }: { id: string }) {
       <div className="trip-actions"><Link className="btn" to={`/group/${group.id}/settlement`}><Wallet size={16}/> Final settlement</Link><button className="ghost" onClick={() => setShowExpense(true)}><Plus size={16}/> Add expense</button></div>
     </div>
     {error && <p className="error" role="alert">{error}</p>}
+    {notice && <div className="success notice dismissible" role="status"><span>{notice}</span><button type="button" className="icon" aria-label="Dismiss confirmation" onClick={() => setNotice('')}><X size={15}/></button></div>}
     {isDemo && <p className="demo-notice compact-demo">This is a safe preview. Demo changes stay in this tab and no payment can be sent.</p>}
     <section className="trip-layout">
       <div className="panel">
@@ -139,7 +175,7 @@ function ExpenseModal({ group, onAdd, close }: { group: Group; onAdd: (expense: 
 }
 
 function HowItWorks() {
-  return <main className="form"><p className="eyebrow">HOW IT WORKS</p><h1>From a sentence to a settlement.</h1><div className="panel">
+  return <main id="main-content" className="form"><p className="eyebrow">HOW IT WORKS</p><h1>From a sentence to a settlement.</h1><div className="panel">
     <h2>1. Create a group</h2><p>Add people, optional profile pictures, and optional Base wallet addresses.</p>
     <h2>2. Talk naturally</h2><p>Choose which member you are, then tell the Agent what happened. It remembers the conversation and asks only for missing details.</p>
     <h2>3. Confirm every change</h2><p>Review Agent actions before expenses, edits, deletions, or people are saved to the group.</p>
@@ -148,7 +184,7 @@ function HowItWorks() {
 }
 
 function Help() {
-  return <main className="form"><p className="eyebrow">HELP & FAQ</p><h1>Questions, answered.</h1><div className="faq-grid">
+  return <main id="main-content" className="form"><p className="eyebrow">HELP & FAQ</p><h1>Questions, answered.</h1><div className="faq-grid">
     <details><summary>What is Splitmate?</summary><p>A shared-expense app that tracks group spending, calculates balances, and settles in native USDC on Base.</p></details>
     <details><summary>Does the Agent change my group automatically?</summary><p>No. Any add, edit, delete, or member change appears as a review card that you must confirm first.</p></details>
     <details><summary>What if someone has no wallet?</summary><p>Open Final Settlement and tap that person to add their Base wallet without leaving the settlement screen.</p></details>
@@ -167,4 +203,8 @@ function Legal({ title }: { title: 'Privacy' | 'Terms of use' }) {
   return <main id="main-content" className="legal form"><p className="eyebrow">SPLITMATE</p><h1>{title}</h1><div className="panel">
     {privacy ? <><h2>Your group data</h2><p>Splitmate stores the group details, expenses, and Agent conversation needed to provide the service. Wallet addresses are used only to identify settlement participants. Splitmate never stores wallet private keys.</p><h2>Payments</h2><p>Every USDC payment is approved in the payer’s own wallet. Onchain transactions are public and governed by the Base network.</p><h2>Questions</h2><p>For project questions, use the contact details supplied with the Splitmate project.</p></> : <><h2>Use of Splitmate</h2><p>Splitmate helps groups calculate shared expenses. You are responsible for checking all expenses, recipient addresses, and payment details before confirming a transaction.</p><h2>No financial advice</h2><p>Settlement suggestions are calculations, not financial advice. Blockchain transactions cannot be reversed once confirmed.</p><h2>Wallet responsibility</h2><p>Only connect a wallet you control. Splitmate does not have access to your private keys and cannot send a payment without your wallet approval.</p></>}
   </div></main>;
+}
+
+function NotFound() {
+  return <main id="main-content" className="empty not-found"><p className="eyebrow">404</p><h1>This link went nowhere.</h1><p>The group may not exist, or this page may have moved.</p><div className="actions"><Link className="btn" to="/create">Create a group <ArrowRight size={16}/></Link><Link className="ghost" to="/group/demo">Open working demo</Link></div></main>;
 }

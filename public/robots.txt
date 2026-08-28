@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://splitmate-weld.vercel.app/sitemap.xml
